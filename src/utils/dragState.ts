@@ -17,6 +17,8 @@ const globalDragState: DragState = {
   isDragging: false,
 };
 
+let clearTimer: ReturnType<typeof setTimeout> | null = null;
+
 type DragListener = (state: DragState) => void;
 const listeners = new Set<DragListener>();
 
@@ -32,6 +34,10 @@ export const subscribeDragState = (listener: DragListener) => {
 };
 
 export const startGlobalDrag = (operator: Operator) => {
+  if (clearTimer) {
+    clearTimeout(clearTimer);
+    clearTimer = null;
+  }
   globalDragState.operatorId = operator.id;
   globalDragState.operatorName = operator.name;
   globalDragState.fromDeptId = operator.departmentId;
@@ -40,11 +46,17 @@ export const startGlobalDrag = (operator: Operator) => {
 };
 
 export const endGlobalDrag = () => {
-  globalDragState.operatorId = null;
-  globalDragState.operatorName = null;
-  globalDragState.fromDeptId = null;
   globalDragState.isDragging = false;
   notifyDragChange();
+
+  // Keep operatorId and operatorName alive for 1200ms so any asynchronous or queued drop event has access
+  if (clearTimer) clearTimeout(clearTimer);
+  clearTimer = setTimeout(() => {
+    globalDragState.operatorId = null;
+    globalDragState.operatorName = null;
+    globalDragState.fromDeptId = null;
+    notifyDragChange();
+  }, 1200);
 };
 
 export const getGlobalDragState = (): DragState => ({

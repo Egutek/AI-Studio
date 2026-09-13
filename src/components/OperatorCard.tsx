@@ -10,21 +10,29 @@ import {
   Edit2,
   GripVertical,
 } from 'lucide-react';
-import { Operator, OperatorStatus } from '../types';
-import { startGlobalDrag, endGlobalDrag } from '../utils/dragState';
+import { Operator, OperatorStatus, DepartmentId } from '../types';
+import { startGlobalDrag, endGlobalDrag, resolveOperatorFromDrop, getGlobalDragState } from '../utils/dragState';
 
 interface OperatorCardProps {
   operator: Operator;
+  allOperators?: Operator[];
+  isSelected?: boolean;
+  onSelect?: (operator: Operator) => void;
   onOpenQuickMove: (operator: Operator) => void;
   onEditOperator: (operator: Operator) => void;
   onChangeStatus: (operatorId: string, newStatus: OperatorStatus) => void;
+  onDropOperator?: (operatorId: string, targetDeptId: DepartmentId) => void;
 }
 
 export const OperatorCard: React.FC<OperatorCardProps> = ({
   operator,
+  allOperators = [],
+  isSelected = false,
+  onSelect,
   onOpenQuickMove,
   onEditOperator,
   onChangeStatus,
+  onDropOperator,
 }) => {
   const [menuOpen, setMenuOpen] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
@@ -93,20 +101,53 @@ export const OperatorCard: React.FC<OperatorCardProps> = ({
     <div
       id={`operator-card-${operator.id}`}
       draggable={true}
+      onClick={(e) => {
+        // Only select if not clicking an interactive element
+        const target = e.target as HTMLElement;
+        if (!target.closest('button') && onSelect) {
+          onSelect(operator);
+        }
+      }}
       onDragStart={(e) => {
         setIsDragging(true);
         startGlobalDrag(operator);
-        e.dataTransfer.setData('application/x-operator-id', operator.id);
-        e.dataTransfer.setData('text/plain', operator.id);
-        e.dataTransfer.effectAllowed = 'move';
+        try {
+          e.dataTransfer.setData('application/x-operator-id', operator.id);
+          e.dataTransfer.setData('text/plain', operator.id);
+          e.dataTransfer.effectAllowed = 'move';
+        } catch {
+          // In some restricted browser modes setData may be prevented
+        }
       }}
       onDragEnd={() => {
         setIsDragging(false);
         endGlobalDrag();
       }}
+      onDragOver={(e) => {
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'move';
+      }}
+      onDrop={(e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        if (onDropOperator) {
+          const resolved = resolveOperatorFromDrop(e, allOperators);
+          const droppedId =
+            resolved?.id ||
+            e.dataTransfer.getData('application/x-operator-id') ||
+            e.dataTransfer.getData('text/plain') ||
+            getGlobalDragState().operatorId;
+
+          if (droppedId) {
+            onDropOperator(droppedId, operator.departmentId);
+          }
+        }
+      }}
       className={`group relative rounded-xl border p-3 shadow-2xs transition-all cursor-grab active:cursor-grabbing select-none ${
         isDragging
           ? 'opacity-35 ring-2 ring-blue-500 border-dashed border-blue-500 bg-blue-50/50 dark:bg-blue-950/40 shadow-none'
+          : isSelected
+          ? 'ring-3 ring-blue-600 dark:ring-blue-400 border-blue-500 bg-blue-50/60 dark:bg-blue-950/60 shadow-md'
           : operator.status === 'absence'
           ? 'bg-rose-50/40 dark:bg-rose-950/20 border-rose-200/80 dark:border-rose-900/60 opacity-80 hover:opacity-100 hover:border-rose-300'
           : 'bg-white dark:bg-slate-800/95 border-slate-200/80 dark:border-slate-700/80 hover:shadow-md hover:border-blue-400 dark:hover:border-blue-500'

@@ -20,6 +20,9 @@ interface DepartmentColumnProps {
   operators: Operator[];
   allOperators?: Operator[];
   totalOperatorsCount: number;
+  selectedOperatorId?: string | null;
+  onSelectOperator?: (operator: Operator) => void;
+  onColumnClickToMove?: (deptId: DepartmentId) => void;
   onOpenQuickMove: (operator: Operator) => void;
   onEditOperator: (operator: Operator) => void;
   onChangeStatus: (operatorId: string, newStatus: OperatorStatus) => void;
@@ -110,6 +113,9 @@ export const DepartmentColumn: React.FC<DepartmentColumnProps> = ({
   operators,
   allOperators = [],
   totalOperatorsCount,
+  selectedOperatorId = null,
+  onSelectOperator,
+  onColumnClickToMove,
   onOpenQuickMove,
   onEditOperator,
   onChangeStatus,
@@ -201,6 +207,8 @@ export const DepartmentColumn: React.FC<DepartmentColumnProps> = ({
 
   const theme = DEPT_HEADER_THEMES[department.id] || DEPT_HEADER_THEMES.hovc;
 
+  const hasSelectionToMove = Boolean(selectedOperatorId);
+
   return (
     <div
       id={`dept-col-${department.id}`}
@@ -208,9 +216,17 @@ export const DepartmentColumn: React.FC<DepartmentColumnProps> = ({
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}
+      onClick={(e) => {
+        const target = e.target as HTMLElement;
+        if (!target.closest('button') && selectedOperatorId && onColumnClickToMove) {
+          onColumnClickToMove(department.id);
+        }
+      }}
       className={`flex flex-col rounded-2xl border transition-all duration-200 min-w-[280px] sm:min-w-[290px] max-w-[340px] flex-1 bg-slate-50/90 dark:bg-slate-900/60 shadow-xs ${
         isDragOver
           ? 'ring-4 ring-blue-500/80 border-blue-500 bg-blue-50/60 dark:bg-blue-950/50 scale-[1.01] shadow-xl'
+          : hasSelectionToMove
+          ? 'border-blue-400 dark:border-blue-600 ring-2 ring-blue-400/30 cursor-pointer hover:ring-blue-500 hover:border-blue-500'
           : theme.border
       }`}
     >
@@ -273,10 +289,16 @@ export const DepartmentColumn: React.FC<DepartmentColumnProps> = ({
 
       {/* Operator cards list */}
       <div
+        onDragOver={handleDragOver}
+        onDrop={handleDrop}
         className="p-3 space-y-2.5 overflow-y-auto max-h-[calc(100vh-320px)] min-h-[140px] flex-1"
       >
         {operators.length === 0 ? (
-          <div className="h-full flex flex-col items-center justify-center p-6 text-center text-slate-400 border-2 border-dashed border-slate-200 dark:border-slate-800 rounded-xl bg-white/40 dark:bg-slate-900/30">
+          <div
+            onDragOver={handleDragOver}
+            onDrop={handleDrop}
+            className="h-full flex flex-col items-center justify-center p-6 text-center text-slate-400 border-2 border-dashed border-slate-200 dark:border-slate-800 rounded-xl bg-white/40 dark:bg-slate-900/30"
+          >
             <Users className="w-7 h-7 mb-2 opacity-40" />
             <p className="text-xs font-medium">Žádný operátor</p>
             <p className="text-[11px] text-slate-400 mt-0.5">
@@ -296,9 +318,13 @@ export const DepartmentColumn: React.FC<DepartmentColumnProps> = ({
             <OperatorCard
               key={operator.id}
               operator={operator}
+              allOperators={allOperators.length > 0 ? allOperators : operators}
+              isSelected={selectedOperatorId === operator.id}
+              onSelect={onSelectOperator}
               onOpenQuickMove={onOpenQuickMove}
               onEditOperator={onEditOperator}
               onChangeStatus={onChangeStatus}
+              onDropOperator={onDropOperator}
             />
           ))
         )}

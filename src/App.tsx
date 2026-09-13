@@ -152,6 +152,9 @@ export default function App() {
   // Drag-and-drop hover state for quick top bar drop zones
   const [dragOverJumpDept, setDragOverJumpDept] = useState<DepartmentId | null>(null);
 
+  // Click-to-move / Touch-to-move selected operator state
+  const [selectedOperatorId, setSelectedOperatorId] = useState<string | null>(null);
+
   // Toast feedback
   const [toastMessage, setToastMessage] = useState<{
     text: string;
@@ -289,6 +292,9 @@ export default function App() {
   // Keyboard shortcut: Ctrl+Z / Cmd+Z for quick undo
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setSelectedOperatorId(null);
+      }
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z' && !e.shiftKey) {
         const target = e.target as HTMLElement | null;
         if (
@@ -313,6 +319,7 @@ export default function App() {
     targetDeptId: DepartmentId,
     reason?: string
   ) => {
+    setSelectedOperatorId(null);
     // Robust find: by id or full name
     const targetOp =
       operators.find((o) => o.id === operatorId) ||
@@ -703,6 +710,7 @@ export default function App() {
   }, [operators, searchQuery]);
 
   // Key metrics - accurate calculations for floor operation and absence
+  const selectedOperator = operators.find((o) => o.id === selectedOperatorId) || null;
   const isOperatorInOperation = (o: Operator) =>
     o.departmentId !== 'unassigned' && o.status === 'active';
   const isOperatorInAbsence = (o: Operator) =>
@@ -782,7 +790,12 @@ export default function App() {
                       key={dept.id}
                       id={`jump-btn-${dept.id}`}
                       onClick={() => {
-                        scrollToDepartment(dept.id);
+                        if (selectedOperatorId) {
+                          handleMoveOperator(selectedOperatorId, dept.id);
+                          setSelectedOperatorId(null);
+                        } else {
+                          scrollToDepartment(dept.id);
+                        }
                       }}
                       onDragOver={(e) => handleJumpPillDragOver(e, dept.id)}
                       onDragLeave={handleJumpPillDragLeave}
@@ -790,9 +803,15 @@ export default function App() {
                       className={`px-3 py-1.5 rounded-xl text-xs font-bold shrink-0 transition-all border shadow-2xs flex items-center gap-1.5 cursor-pointer select-none ${
                         isHovered
                           ? `${theme.activeBg} ${theme.activeBorder} scale-110 shadow-lg z-30 ring-4`
+                          : selectedOperatorId
+                          ? `${theme.border} ring-2 ring-blue-400 bg-white dark:bg-slate-800 text-blue-700 dark:text-blue-300 animate-pulse`
                           : `bg-slate-50 dark:bg-slate-800 text-slate-800 dark:text-slate-200 border-slate-200 dark:border-slate-700/80 ${theme.border} active:scale-95`
                       }`}
-                      title={`Kliknutím přeskočit na ${dept.name} • Přetažením operátora sem jej okamžitě přesunete`}
+                      title={
+                        selectedOperatorId
+                          ? `Kliknutím sem okamžitě přesunete ${selectedOperator?.name || 'vybraného člověka'} do ${dept.name}`
+                          : `Kliknutím přeskočit na ${dept.name} • Přetažením operátora sem jej okamžitě přesunete`
+                      }
                     >
                       <span className="pointer-events-none flex items-center gap-1">
                         {isHovered && <ArrowDownToLine className="w-3.5 h-3.5 animate-bounce" />}
@@ -846,7 +865,7 @@ export default function App() {
                   Pododdělení PICK:
                 </span>
                 <span>
-                  Přetáhněte kartu operátora <strong>přímo na horní tlačítko oddělení (HOVC, HOVS, OBWF...)</strong> pro okamžitý přesun, nebo na samotný sloupec. K dispozici je také tlačítko „Přesunout“ a klávesová zkratka <strong>Ctrl+Z</strong> pro vrácení zpět.
+                  Přetáhněte kartu operátora kurzorem na jakýkoliv sloupec nebo horní tlačítko. Nebo na kartu <strong>klikněte pro výběr</strong> a poté klikněte na cílové oddělení.
                 </span>
               </div>
               {searchQuery && (
@@ -855,6 +874,36 @@ export default function App() {
                 </span>
               )}
             </div>
+
+            {/* Selected Operator Banner (Click-to-move mode) */}
+            {selectedOperator && (
+              <div
+                id="selected-operator-move-banner"
+                className="flex items-center justify-between gap-3 px-4 py-3 bg-gradient-to-r from-blue-600 via-blue-700 to-indigo-700 text-white rounded-2xl shadow-xl border-2 border-blue-400/80 animate-in fade-in slide-in-from-top-2 duration-150"
+              >
+                <div className="flex items-center gap-3 text-xs sm:text-sm font-bold">
+                  <span className="relative flex h-3 w-3">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-3 w-3 bg-white"></span>
+                  </span>
+                  <div>
+                    <span>
+                      Vybrán operátor: <span className="underline decoration-white/60 font-black text-amber-200">{selectedOperator.name}</span> ({selectedOperator.machineType})
+                    </span>
+                    <p className="text-[11px] font-normal text-blue-100 mt-0.5">
+                      Klikněte na jakýkoliv sloupec oddělení níže nebo horní štítek pro okamžitý přesun
+                    </p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setSelectedOperatorId(null)}
+                  className="px-3 py-1.5 text-xs font-bold rounded-xl bg-white/20 hover:bg-white/30 text-white transition-all cursor-pointer border border-white/30 shrink-0 active:scale-95"
+                >
+                  Zrušit výběr (Esc)
+                </button>
+              </div>
+            )}
 
             {/* Horizontal scrollable columns: HOVC, HOVS, Putaway, VAS, OBWF, VNA, OBWI */}
             <div
@@ -873,6 +922,16 @@ export default function App() {
                     operators={deptOps}
                     allOperators={operators}
                     totalOperatorsCount={filteredOperators.length}
+                    selectedOperatorId={selectedOperatorId}
+                    onSelectOperator={(op) => {
+                      setSelectedOperatorId((prev) => (prev === op.id ? null : op.id));
+                    }}
+                    onColumnClickToMove={(deptId) => {
+                      if (selectedOperatorId) {
+                        handleMoveOperator(selectedOperatorId, deptId);
+                        setSelectedOperatorId(null);
+                      }
+                    }}
                     onOpenQuickMove={(op) => setQuickMoveOperator(op)}
                     onEditOperator={(op) => setAddEditOperator({ operator: op })}
                     onChangeStatus={handleChangeStatus}
