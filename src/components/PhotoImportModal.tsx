@@ -347,7 +347,7 @@ export const PhotoImportModal: React.FC<PhotoImportModalProps> = ({
                     rows={7}
                     value={rawText}
                     onChange={(e) => setRawText(e.target.value)}
-                    placeholder={`Příklad:\nPetr Novák (LL) - HOVC\nJan Svoboda RTR VNA\nMilan Dvořák - Putaway\nTomáš Kučera RTR HOVS`}
+                    placeholder={`Příklad:\nPetr Novák (LL) - Outbound\nJan Svoboda RTR VNA\nMilan Dvořák - Putaway\nTomáš Kučera RTR HOVS`}
                     className="w-full text-xs sm:text-sm font-mono p-3 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 focus:ring-2 focus:ring-blue-500 outline-hidden"
                   />
                   <p className="text-[11px] text-slate-500">

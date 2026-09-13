@@ -8,7 +8,7 @@ export const BUILTIN_TEMPLATES: ShiftTemplate[] = [
   {
     id: 'builtin-zf-initial',
     name: 'Výchozí rozdělení ZF PICK (65 lidí)',
-    description: 'Standardní obsazení oddělení PICK (HOVC 10, HOVS 12, Putaway 10, VAS 10, OBWF 8, VNA 7, OBWI 8).',
+    description: 'Standardní obsazení oddělení PICK (Outbound 10, HOVS 12, Putaway 10, VAS 10, OBWF 8, VNA 7, OBWI 8).',
     createdAt: '2026-09-12T06:00:00.000Z',
     isBuiltIn: true,
     operatorCount: INITIAL_OPERATORS.length,

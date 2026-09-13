@@ -102,15 +102,17 @@ export const QuickMoveModal: React.FC<QuickMoveModalProps> = ({
             </span>
           </div>
 
-          <span
-            className={`font-black text-xs px-2.5 py-0.5 rounded-md ${
-              operator.machineType === 'RTR'
-                ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/60 dark:text-blue-200'
-                : 'bg-amber-100 text-amber-800 dark:bg-amber-900/60 dark:text-amber-200'
-            }`}
-          >
-            {operator.machineType}
-          </span>
+          {operator.machineType && operator.machineType !== 'NONE' && (
+            <span
+              className={`font-black text-xs px-2.5 py-0.5 rounded-md ${
+                operator.machineType === 'RTR'
+                  ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/60 dark:text-blue-200'
+                  : 'bg-amber-100 text-amber-800 dark:bg-amber-900/60 dark:text-amber-200'
+              }`}
+            >
+              {operator.machineType}
+            </span>
+          )}
         </div>
 
         {/* Department Selection Grid */}

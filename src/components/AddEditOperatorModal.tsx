@@ -21,7 +21,7 @@ export const AddEditOperatorModal: React.FC<AddEditOperatorModalProps> = ({
   onDelete,
 }) => {
   const [name, setName] = useState('');
-  const [machineType, setMachineType] = useState<MachineType>('LL');
+  const [machineType, setMachineType] = useState<MachineType>('NONE');
   const [departmentId, setDepartmentId] = useState<DepartmentId>(defaultDeptId);
   const [status, setStatus] = useState<OperatorStatus>('active');
   const [notes, setNotes] = useState('');
@@ -29,13 +29,13 @@ export const AddEditOperatorModal: React.FC<AddEditOperatorModalProps> = ({
   useEffect(() => {
     if (operator) {
       setName(operator.name);
-      setMachineType(operator.machineType || 'LL');
+      setMachineType(operator.machineType || 'NONE');
       setDepartmentId(operator.departmentId);
       setStatus(operator.status);
       setNotes(operator.notes || '');
     } else {
       setName('');
-      setMachineType('LL');
+      setMachineType('NONE');
       setDepartmentId(defaultDeptId);
       setStatus('active');
       setNotes('');
@@ -128,38 +128,62 @@ export const AddEditOperatorModal: React.FC<AddEditOperatorModalProps> = ({
             />
           </div>
 
-          {/* Machine qualification: strictly LL vs RTR */}
+          {/* Machine qualification: LL, RTR or NONE */}
           <div>
-            <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
-              Stroj / Oprávnění *
-            </label>
-            <div className="grid grid-cols-2 gap-2.5">
+            <div className="flex items-center justify-between mb-1.5">
+              <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">
+                Stroj / Oprávnění
+              </label>
+              <span className="text-[11px] text-slate-400">
+                Volitelné (lze ignorovat)
+              </span>
+            </div>
+
+            <div className="grid grid-cols-3 gap-2">
               <button
                 type="button"
-                onClick={() => setMachineType('LL')}
-                className={`py-2.5 px-3 rounded-xl border text-center transition-all ${
+                onClick={() => setMachineType(machineType === 'LL' ? 'NONE' : 'LL')}
+                className={`py-2 px-2 rounded-xl border text-center transition-all cursor-pointer ${
                   machineType === 'LL'
                     ? 'border-amber-500 bg-amber-50 dark:bg-amber-950/40 text-amber-900 dark:text-amber-200 font-extrabold ring-2 ring-amber-500/30'
                     : 'border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-100'
                 }`}
               >
-                <div className="text-base font-black">LL</div>
-                <div className="text-[11px] opacity-75">Nízkozdvižný vozík</div>
+                <div className="text-sm font-black">LL</div>
+                <div className="text-[10px] opacity-75">Nízkozdvih</div>
               </button>
 
               <button
                 type="button"
-                onClick={() => setMachineType('RTR')}
-                className={`py-2.5 px-3 rounded-xl border text-center transition-all ${
+                onClick={() => setMachineType(machineType === 'RTR' ? 'NONE' : 'RTR')}
+                className={`py-2 px-2 rounded-xl border text-center transition-all cursor-pointer ${
                   machineType === 'RTR'
                     ? 'border-blue-500 bg-blue-50 dark:bg-blue-950/40 text-blue-900 dark:text-blue-200 font-extrabold ring-2 ring-blue-500/30'
                     : 'border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-100'
                 }`}
               >
-                <div className="text-base font-black">RTR</div>
-                <div className="text-[11px] opacity-75">Retrak (vysokozdvih)</div>
+                <div className="text-sm font-black">RTR</div>
+                <div className="text-[10px] opacity-75">Retrak</div>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setMachineType('NONE')}
+                className={`py-2 px-2 rounded-xl border text-center transition-all cursor-pointer ${
+                  machineType === 'NONE'
+                    ? 'border-slate-500 bg-slate-100 dark:bg-slate-700 text-slate-900 dark:text-white font-extrabold ring-2 ring-slate-400/30'
+                    : 'border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-500 dark:text-slate-400 hover:bg-slate-100'
+                }`}
+              >
+                <div className="text-sm font-bold">Žádný</div>
+                <div className="text-[10px] opacity-75">Ignorovat</div>
               </button>
             </div>
+            {machineType === 'NONE' && (
+              <p className="mt-1 text-[10px] text-slate-400 italic">
+                U tohoto operátora se nebude zobrazovat žádný štítek stroje LL ani RTR.
+              </p>
+            )}
           </div>
 
           {/* Department */}

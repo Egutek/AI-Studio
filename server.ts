@@ -131,11 +131,12 @@ Vrať POUZE validní JSON pole objektů s touto strukturou:
 [
   {
     "name": "Celé Jméno a Příjmení",
-    "machineType": "LL" | "RTR",
+    "machineType": "LL" | "RTR" | "NONE",
     "departmentId": "hovc" | "hovs" | "putaway" | "vas" | "obwf" | "vna" | "obwi" | "unassigned",
     "notes": "volitelná krátká poznámka (např. pozice nebo původní údaj z tabulky)"
   }
 ]
+Poznámka: oddělení "hovc" odpovídá sekci "Outbound" / expedice a balení. Pokud operátor nemá uveden stroj LL ani RTR, nastav "machineType": "NONE".
 `;
 
 // Extract operators from photo or text
@@ -153,7 +154,12 @@ app.post('/api/extract-operators', async (req, res) => {
         const lines = textInput.split(/\r?\n/).filter((l: string) => l.trim().length > 0);
         const parsed = lines.map((line: string, idx: number) => {
           const lower = line.toLowerCase();
-          const machineType: 'LL' | 'RTR' = lower.includes('rtr') ? 'RTR' : 'LL';
+          const machineType: 'LL' | 'RTR' | 'NONE' = lower.includes('rtr')
+            ? 'RTR'
+            : lower.includes('ll')
+            ? 'LL'
+            : 'NONE';
+
           let departmentId = 'hovc';
           if (lower.includes('hovs')) departmentId = 'hovs';
           else if (lower.includes('put') || lower.includes('zasklad')) departmentId = 'putaway';
@@ -161,9 +167,10 @@ app.post('/api/extract-operators', async (req, res) => {
           else if (lower.includes('obwf')) departmentId = 'obwf';
           else if (lower.includes('vna')) departmentId = 'vna';
           else if (lower.includes('obwi')) departmentId = 'obwi';
+          else if (lower.includes('outbound') || lower.includes('hovc') || lower.includes('exped')) departmentId = 'hovc';
 
           const cleanName = line
-            .replace(/(LL|RTR|HOVC|HOVS|PUTAWAY|VAS|OBWF|VNA|OBWI)/gi, '')
+            .replace(/(LL|RTR|OUTBOUND|HOVC|HOVS|PUTAWAY|VAS|OBWF|VNA|OBWI)/gi, '')
             .replace(/[-,:;|()]/g, ' ')
             .replace(/\s+/g, ' ')
             .trim() || `Operátor ${idx + 1}`;

@@ -8,7 +8,7 @@ export type DepartmentId =
   | 'obwi'
   | 'unassigned';
 
-export type MachineType = 'LL' | 'RTR';
+export type MachineType = 'LL' | 'RTR' | 'NONE';
 
 export type OperatorStatus = 'active' | 'break' | 'absence';
 

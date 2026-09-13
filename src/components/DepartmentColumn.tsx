@@ -10,6 +10,7 @@ import {
   UserX,
   Plus,
   Users,
+  CheckSquare,
 } from 'lucide-react';
 import { Department, DepartmentId, Operator, OperatorStatus } from '../types';
 import { OperatorCard } from './OperatorCard';
@@ -21,11 +22,13 @@ interface DepartmentColumnProps {
   allOperators?: Operator[];
   totalOperatorsCount: number;
   selectedOperatorId?: string | null;
+  bulkSelectedIds?: Set<string>;
+  onToggleBulkSelect?: (operatorId: string) => void;
   onSelectOperator?: (operator: Operator) => void;
   onColumnClickToMove?: (deptId: DepartmentId) => void;
   onOpenQuickMove: (operator: Operator) => void;
   onEditOperator: (operator: Operator) => void;
-  onChangeStatus: (operatorId: string, newStatus: OperatorStatus) => void;
+  onChangeStatus?: (operatorId: string, newStatus: OperatorStatus) => void;
   onAddOperatorToDept: (deptId: DepartmentId) => void;
   onDropOperator: (operatorId: string, targetDeptId: DepartmentId) => void;
 }
@@ -114,6 +117,8 @@ export const DepartmentColumn: React.FC<DepartmentColumnProps> = ({
   allOperators = [],
   totalOperatorsCount,
   selectedOperatorId = null,
+  bulkSelectedIds,
+  onToggleBulkSelect,
   onSelectOperator,
   onColumnClickToMove,
   onOpenQuickMove,
@@ -244,15 +249,41 @@ export const DepartmentColumn: React.FC<DepartmentColumnProps> = ({
             </div>
           </div>
 
-          {/* Simple clean + button */}
-          <button
-            id={`add-op-btn-${department.id}`}
-            onClick={() => onAddOperatorToDept(department.id)}
-            className={`p-1.5 rounded-lg text-white transition-all hover:scale-110 active:scale-95 ${theme.addBtnHover}`}
-            title={`Přidat člověka do ${department.name}`}
-          >
-            <Plus className="w-5 h-5" />
-          </button>
+          <div className="flex items-center gap-1">
+            {operators.length > 0 && onToggleBulkSelect && (
+              <button
+                type="button"
+                onClick={() => {
+                  const allInDeptSelected = operators.every((o) => bulkSelectedIds?.has(o.id));
+                  operators.forEach((o) => {
+                    if (allInDeptSelected) {
+                      if (bulkSelectedIds?.has(o.id)) onToggleBulkSelect(o.id);
+                    } else {
+                      if (!bulkSelectedIds?.has(o.id)) onToggleBulkSelect(o.id);
+                    }
+                  });
+                }}
+                className={`p-1.5 rounded-lg text-white/80 hover:text-white transition-all ${theme.addBtnHover}`}
+                title={
+                  operators.every((o) => bulkSelectedIds?.has(o.id))
+                    ? 'Zrušit označení operátorů v oddělení'
+                    : 'Označit všechny operátory v tomto oddělení'
+                }
+              >
+                <CheckSquare className="w-4 h-4" />
+              </button>
+            )}
+
+            {/* Simple clean + button */}
+            <button
+              id={`add-op-btn-${department.id}`}
+              onClick={() => onAddOperatorToDept(department.id)}
+              className={`p-1.5 rounded-lg text-white transition-all hover:scale-110 active:scale-95 ${theme.addBtnHover}`}
+              title={`Přidat člověka do ${department.name}`}
+            >
+              <Plus className="w-5 h-5" />
+            </button>
+          </div>
         </div>
 
         {/* Live Counters & Machine breakdown row */}
@@ -277,12 +308,21 @@ export const DepartmentColumn: React.FC<DepartmentColumnProps> = ({
           </div>
 
           <div className="flex items-center gap-1.5 text-[11px] font-bold self-start mt-0.5">
-            <span className={`px-2 py-0.5 rounded-md ${theme.chipBgLL}`}>
-              {llCount}× LL
-            </span>
-            <span className={`px-2 py-0.5 rounded-md ${theme.chipBgRTR}`}>
-              {rtrCount}× RTR
-            </span>
+            {llCount > 0 && (
+              <span className={`px-2 py-0.5 rounded-md ${theme.chipBgLL}`}>
+                {llCount}× LL
+              </span>
+            )}
+            {rtrCount > 0 && (
+              <span className={`px-2 py-0.5 rounded-md ${theme.chipBgRTR}`}>
+                {rtrCount}× RTR
+              </span>
+            )}
+            {llCount === 0 && rtrCount === 0 && (
+              <span className="text-[10px] text-white/60 font-normal">
+                {operators.length > 0 ? `${operators.length} op` : '—'}
+              </span>
+            )}
           </div>
         </div>
       </div>
@@ -291,7 +331,7 @@ export const DepartmentColumn: React.FC<DepartmentColumnProps> = ({
       <div
         onDragOver={handleDragOver}
         onDrop={handleDrop}
-        className="p-3 space-y-2.5 overflow-y-auto max-h-[calc(100vh-320px)] min-h-[140px] flex-1"
+        className="p-2 space-y-1.5 overflow-y-auto max-h-[calc(100vh-240px)] min-h-[140px] flex-1"
       >
         {operators.length === 0 ? (
           <div
@@ -320,6 +360,8 @@ export const DepartmentColumn: React.FC<DepartmentColumnProps> = ({
               operator={operator}
               allOperators={allOperators.length > 0 ? allOperators : operators}
               isSelected={selectedOperatorId === operator.id}
+              isBulkSelected={bulkSelectedIds?.has(operator.id) ?? false}
+              onToggleBulkSelect={onToggleBulkSelect}
               onSelect={onSelectOperator}
               onOpenQuickMove={onOpenQuickMove}
               onEditOperator={onEditOperator}

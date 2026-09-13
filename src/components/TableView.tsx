@@ -5,6 +5,10 @@ import { DepartmentId, Operator, OperatorStatus } from '../types';
 
 interface TableViewProps {
   operators: Operator[];
+  bulkSelectedIds?: Set<string>;
+  onToggleBulkSelect?: (operatorId: string) => void;
+  onSelectAll?: () => void;
+  onClearSelection?: () => void;
   onOpenQuickMove: (operator: Operator) => void;
   onEditOperator: (operator: Operator) => void;
   onChangeDepartment: (operatorId: string, deptId: DepartmentId) => void;
@@ -14,18 +18,42 @@ interface TableViewProps {
 
 export const TableView: React.FC<TableViewProps> = ({
   operators,
+  bulkSelectedIds,
+  onToggleBulkSelect,
+  onSelectAll,
+  onClearSelection,
   onOpenQuickMove,
   onEditOperator,
   onChangeDepartment,
-  onChangeStatus,
   onDeleteOperator,
 }) => {
+  const isAllSelected = operators.length > 0 && operators.every((o) => bulkSelectedIds?.has(o.id));
+  const isSomeSelected = operators.some((o) => bulkSelectedIds?.has(o.id));
+
   return (
     <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs overflow-hidden">
       <div className="overflow-x-auto">
         <table className="w-full text-left text-xs sm:text-sm border-collapse">
           <thead>
             <tr className="border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/60 text-slate-500 dark:text-slate-400 font-semibold text-[11px] uppercase tracking-wider">
+              <th className="py-3 px-3 w-10 text-center">
+                <input
+                  type="checkbox"
+                  checked={isAllSelected}
+                  ref={(el) => {
+                    if (el) el.indeterminate = !isAllSelected && isSomeSelected;
+                  }}
+                  onChange={() => {
+                    if (isAllSelected) {
+                      onClearSelection?.();
+                    } else {
+                      onSelectAll?.();
+                    }
+                  }}
+                  className="w-3.5 h-3.5 rounded border-slate-300 dark:border-slate-600 text-blue-600 cursor-pointer"
+                  title="Označit vše pro hromadný výběr"
+                />
+              </th>
               <th className="py-3 px-4">Operátor</th>
               <th className="py-3 px-4">Stroj / Oprávnění</th>
               <th className="py-3 px-4">Oddělení (PICK)</th>
@@ -36,26 +64,43 @@ export const TableView: React.FC<TableViewProps> = ({
           </thead>
           <tbody className="divide-y divide-slate-100 dark:divide-slate-800/80">
             {operators.map((op) => {
+              const isSelected = bulkSelectedIds?.has(op.id) ?? false;
               return (
                 <tr
                   key={op.id}
-                  className="hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors"
+                  className={`transition-colors ${
+                    isSelected
+                      ? 'bg-blue-50/70 dark:bg-blue-950/40'
+                      : 'hover:bg-slate-50 dark:hover:bg-slate-800/40'
+                  }`}
                 >
+                  <td className="py-3 px-3 text-center">
+                    <input
+                      type="checkbox"
+                      checked={isSelected}
+                      onChange={() => onToggleBulkSelect?.(op.id)}
+                      className="w-3.5 h-3.5 rounded border-slate-300 dark:border-slate-600 text-blue-600 cursor-pointer"
+                    />
+                  </td>
                   <td className="py-3 px-4 font-bold text-slate-900 dark:text-white">
                     <span>{op.name}</span>
                   </td>
 
                   {/* LL or RTR */}
                   <td className="py-3 px-4">
-                    <span
-                      className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-black tracking-wider ${
-                        op.machineType === 'RTR'
-                          ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/60 dark:text-blue-200'
-                          : 'bg-amber-100 text-amber-800 dark:bg-amber-900/60 dark:text-amber-200'
-                      }`}
-                    >
-                      {op.machineType}
-                    </span>
+                    {op.machineType && op.machineType !== 'NONE' ? (
+                      <span
+                        className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-black tracking-wider ${
+                          op.machineType === 'RTR'
+                            ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/60 dark:text-blue-200'
+                            : 'bg-amber-100 text-amber-800 dark:bg-amber-900/60 dark:text-amber-200'
+                        }`}
+                      >
+                        {op.machineType}
+                      </span>
+                    ) : (
+                      <span className="text-xs text-slate-400">—</span>
+                    )}
                   </td>
 
                   {/* Department selector */}
@@ -75,48 +120,24 @@ export const TableView: React.FC<TableViewProps> = ({
 
                   {/* Status */}
                   <td className="py-3 px-4">
-                    {onChangeStatus ? (
-                      <select
-                        value={op.status}
-                        onChange={(e) => onChangeStatus(op.id, e.target.value as OperatorStatus)}
-                        className={`text-xs font-semibold px-2 py-1 rounded-lg border focus:ring-2 focus:outline-hidden ${
-                          op.status === 'active'
-                            ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300 border-emerald-300 dark:border-emerald-800'
-                            : op.status === 'break'
-                            ? 'bg-amber-50 dark:bg-amber-950/40 text-amber-800 dark:text-amber-300 border-amber-300 dark:border-amber-800'
-                            : 'bg-rose-50 dark:bg-rose-950/40 text-rose-800 dark:text-rose-300 border-rose-300 dark:border-rose-800'
-                        }`}
-                      >
-                        <option value="active">🟢 Aktivní</option>
-                        <option value="break">🟡 Pauza</option>
-                        <option value="absence">🔴 Absence</option>
-                      </select>
-                    ) : (
+                    <span
+                      className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-medium ${
+                        op.departmentId === 'unassigned' || op.status === 'absence'
+                          ? 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300'
+                          : 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300'
+                      }`}
+                    >
                       <span
-                        className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-medium ${
-                          op.status === 'active'
-                            ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300'
-                            : op.status === 'break'
-                            ? 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300'
-                            : 'bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-300'
+                        className={`w-1.5 h-1.5 rounded-full ${
+                          op.departmentId === 'unassigned' || op.status === 'absence'
+                            ? 'bg-slate-400'
+                            : 'bg-emerald-500'
                         }`}
-                      >
-                        <span
-                          className={`w-1.5 h-1.5 rounded-full ${
-                            op.status === 'active'
-                              ? 'bg-emerald-500'
-                              : op.status === 'break'
-                              ? 'bg-amber-500'
-                              : 'bg-rose-500'
-                          }`}
-                        />
-                        {op.status === 'active'
-                          ? 'Aktivní'
-                          : op.status === 'break'
-                          ? 'Pauza'
-                          : 'Absence'}
-                      </span>
-                    )}
+                      />
+                      {op.departmentId === 'unassigned' || op.status === 'absence'
+                        ? 'Absence'
+                        : 'V provozu'}
+                    </span>
                   </td>
 
                   {/* Note */}

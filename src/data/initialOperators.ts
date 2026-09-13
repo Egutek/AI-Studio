@@ -2,7 +2,7 @@ import { Operator } from '../types';
 
 // Reálný seznam 65 operátorů ZF Aftermarket Ostrov (Oddělení PICK)
 export const INITIAL_OPERATORS: Operator[] = [
-  // --- HOVC (10 operátorů) ---
+  // --- Outbound (10 operátorů) ---
   {
     id: 'op-1',
     name: 'Andrii Gurkot',

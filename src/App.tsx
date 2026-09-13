@@ -24,14 +24,13 @@ import { BossAnswerCard } from './components/BossAnswerCard';
 import { DepartmentColumn } from './components/DepartmentColumn';
 import { TableView } from './components/TableView';
 import { WidgetView } from './components/WidgetView';
+import { BulkActionBar } from './components/BulkActionBar';
 import { QuickMoveModal } from './components/QuickMoveModal';
 import { BossReportModal } from './components/BossReportModal';
 import { AddEditOperatorModal } from './components/AddEditOperatorModal';
 import { HistoryModal } from './components/HistoryModal';
 import { PhotoImportModal } from './components/PhotoImportModal';
 import { ShiftTemplatesModal } from './components/ShiftTemplatesModal';
-import { GoogleDriveModal } from './components/GoogleDriveModal';
-import { initAuth } from './services/googleDriveAuth';
 import { ShiftTemplate } from './types';
 import { applyTemplateToOperators } from './data/templates';
 import { CheckCircle2, AlertTriangle, Play, Pause, ArrowDownToLine, Move } from 'lucide-react';
@@ -119,9 +118,18 @@ export default function App() {
   const [history, setHistory] = useState<MoveHistoryRecord[]>(() => loadHistory());
   const [undoStack, setUndoStack] = useState<UndoOperation[]>(() => loadUndoStack());
 
-  // Search & View Mode
+  // Bulk Selection of Operators (subtle checkboxes)
+  const [bulkSelectedIds, setBulkSelectedIds] = useState<Set<string>>(new Set());
+
+  // Search & View Mode (persisted across sessions)
   const [searchQuery, setSearchQuery] = useState('');
-  const [viewMode, setViewMode] = useState<'board' | 'widget' | 'table'>('board');
+  const [viewMode, setViewMode] = useState<'board' | 'widget' | 'table'>(() => {
+    try {
+      return (localStorage.getItem('zf_ostrov_view_mode') as 'board' | 'widget' | 'table') || 'board';
+    } catch {
+      return 'board';
+    }
+  });
 
   // Auto-scroll state & container ref
   const boardContainerRef = useRef<HTMLDivElement>(null);
@@ -133,21 +141,10 @@ export default function App() {
   const [isHistoryModalOpen, setIsHistoryModalOpen] = useState(false);
   const [isPhotoImportOpen, setIsPhotoImportOpen] = useState(false);
   const [isTemplatesModalOpen, setIsTemplatesModalOpen] = useState(false);
-  const [isGoogleDriveModalOpen, setIsGoogleDriveModalOpen] = useState(false);
-  const [isDriveConnected, setIsDriveConnected] = useState(false);
   const [addEditOperator, setAddEditOperator] = useState<{
     operator: Operator | null;
     defaultDeptId?: DepartmentId;
   } | null>(null);
-
-  // Monitor Google Drive authentication state for Header badge
-  useEffect(() => {
-    const unsub = initAuth(
-      () => setIsDriveConnected(true),
-      () => setIsDriveConnected(false)
-    );
-    return () => unsub();
-  }, []);
 
   // Drag-and-drop hover state for quick top bar drop zones
   const [dragOverJumpDept, setDragOverJumpDept] = useState<DepartmentId | null>(null);
@@ -162,7 +159,15 @@ export default function App() {
     undoAction?: () => void;
   } | null>(null);
 
-  // Persist operators, history & undo stack
+  // Synchronous references for instant persistence on tab close / unload
+  const operatorsRef = useRef(operators);
+  operatorsRef.current = operators;
+  const historyRef = useRef(history);
+  historyRef.current = history;
+  const undoStackRef = useRef(undoStack);
+  undoStackRef.current = undoStack;
+
+  // Persist operators, history & undo stack on every update
   useEffect(() => {
     saveOperators(operators);
   }, [operators]);
@@ -174,6 +179,26 @@ export default function App() {
   useEffect(() => {
     saveUndoStack(undoStack);
   }, [undoStack]);
+
+  // Persist view mode
+  useEffect(() => {
+    try {
+      localStorage.setItem('zf_ostrov_view_mode', viewMode);
+    } catch {
+      // ignore
+    }
+  }, [viewMode]);
+
+  // Flush persistence synchronously before window closes / unloads
+  useEffect(() => {
+    const handleBeforeUnload = () => {
+      saveOperators(operatorsRef.current);
+      saveHistory(historyRef.current);
+      saveUndoStack(undoStackRef.current);
+    };
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, []);
 
   // Show auto-dismissing toast
   const showToast = (text: string, isWarning?: boolean, undoAction?: () => void) => {
@@ -289,11 +314,12 @@ export default function App() {
     });
   }, [scrollToDepartment]);
 
-  // Keyboard shortcut: Ctrl+Z / Cmd+Z for quick undo
+  // Keyboard shortcut: Ctrl+Z / Cmd+Z for quick undo, Escape to deselect
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
         setSelectedOperatorId(null);
+        setBulkSelectedIds(new Set());
       }
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z' && !e.shiftKey) {
         const target = e.target as HTMLElement | null;
@@ -312,6 +338,89 @@ export default function App() {
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [handleUndoSingle]);
+
+  // Bulk selection toggle handler
+  const handleToggleBulkSelect = useCallback((operatorId: string) => {
+    setBulkSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(operatorId)) {
+        next.delete(operatorId);
+      } else {
+        next.add(operatorId);
+      }
+      return next;
+    });
+  }, []);
+
+  // Select all operators
+  const handleSelectAll = useCallback(() => {
+    setBulkSelectedIds(new Set(operators.map((o) => o.id)));
+  }, [operators]);
+
+  // Clear bulk selection
+  const handleClearBulkSelection = useCallback(() => {
+    setBulkSelectedIds(new Set());
+  }, []);
+
+  // Execute bulk move of all selected operators to target department
+  const handleBulkMove = (targetDeptId: DepartmentId) => {
+    if (bulkSelectedIds.size === 0) return;
+    const targetDept = getDepartmentById(targetDeptId);
+    const toMove = operators.filter((o) => bulkSelectedIds.has(o.id));
+    if (toMove.length === 0) return;
+
+    const count = toMove.length;
+    const newStatus: OperatorStatus = targetDeptId === 'unassigned' ? 'absence' : 'active';
+    const now = new Date().toISOString();
+
+    const updatedOperators = operators.map((o) => {
+      if (bulkSelectedIds.has(o.id)) {
+        return {
+          ...o,
+          departmentId: targetDeptId,
+          status: newStatus,
+          isVnaOnly: false,
+          lastMovedAt: now,
+        };
+      }
+      return o;
+    });
+
+    setOperators(updatedOperators);
+    saveOperators(updatedOperators);
+
+    // Add undo operations for all moved operators
+    const undoOps: UndoOperation[] = toMove.map((op) => ({
+      id: `undo-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
+      operatorId: op.id,
+      operatorName: op.name,
+      machineType: op.machineType,
+      fromDept: op.departmentId,
+      toDept: targetDeptId,
+      fromStatus: op.status,
+      toStatus: newStatus,
+      timestamp: now,
+    }));
+    setUndoStack((prev) => [...undoOps, ...prev].slice(0, 5));
+
+    // Append to audit history
+    const historyItem: MoveHistoryRecord = {
+      id: `hist-bulk-${Date.now()}`,
+      operatorId: 'bulk',
+      operatorName: `${count} operátorů`,
+      machineType: 'NONE',
+      fromDept: toMove[0]?.departmentId || 'unassigned',
+      toDept: targetDeptId,
+      timestamp: now,
+      reason: `Hromadný přesun: ${count} operátorů přesunuto do ${targetDept.name}`,
+    };
+    setHistory((prev) => [historyItem, ...prev]);
+
+    // Clear selection
+    setBulkSelectedIds(new Set());
+    scrollToDepartment(targetDeptId);
+    showToast(`Hromadně přesunuto ${count} operátorů do oddělení ${targetDept.name}`);
+  };
 
   // Move operator handler with strict VNA rule & undo tracking
   const handleMoveOperator = (
@@ -357,6 +466,7 @@ export default function App() {
     });
 
     setOperators(updatedOperators);
+    saveOperators(updatedOperators);
 
     // Push into undo stack (capped at last 5 operations)
     const undoOp: UndoOperation = {
@@ -462,19 +572,20 @@ export default function App() {
     const previousDeptId = targetOp.departmentId;
     const previousStatus = targetOp.status;
 
-    setOperators((prev) =>
-      prev.map((op) => {
-        if (op.id === operatorId) {
-          return {
-            ...op,
-            status: newStatus,
-            departmentId: targetDeptId,
-            lastMovedAt: new Date().toISOString(),
-          };
-        }
-        return op;
-      })
-    );
+    const updated = operators.map((op) => {
+      if (op.id === operatorId) {
+        return {
+          ...op,
+          status: newStatus,
+          departmentId: targetDeptId,
+          lastMovedAt: new Date().toISOString(),
+        };
+      }
+      return op;
+    });
+
+    setOperators(updated);
+    saveOperators(updated);
 
     if (previousDeptId !== targetDeptId || previousStatus !== newStatus) {
       const undoOp: UndoOperation = {
@@ -504,6 +615,7 @@ export default function App() {
   const handleApplyTemplate = (template: ShiftTemplate) => {
     const updated = applyTemplateToOperators(template, operators);
     setOperators(updated);
+    saveOperators(updated);
     showToast(`Šablona „${template.name}“ byla načtena do směny (${updated.length} lidí).`);
   };
 
@@ -530,14 +642,12 @@ export default function App() {
 
     const isNew = !operators.some((o) => o.id === sanitizedOpData.id);
 
-    setOperators((prev) => {
-      const exists = prev.some((o) => o.id === sanitizedOpData.id);
-      if (exists) {
-        return prev.map((o) => (o.id === sanitizedOpData.id ? ({ ...o, ...sanitizedOpData } as Operator) : o));
-      } else {
-        return [sanitizedOpData as Operator, ...prev];
-      }
-    });
+    const updated = operators.some((o) => o.id === sanitizedOpData.id)
+      ? operators.map((o) => (o.id === sanitizedOpData.id ? ({ ...o, ...sanitizedOpData } as Operator) : o))
+      : [sanitizedOpData as Operator, ...operators];
+
+    setOperators(updated);
+    saveOperators(updated);
 
     if (sanitizedOpData.departmentId) {
       scrollToDepartment(sanitizedOpData.departmentId);
@@ -552,11 +662,12 @@ export default function App() {
 
   // Import operators from photo OCR or text list
   const handleImportOperators = (newOps: Operator[], replaceAll: boolean) => {
+    const updated = replaceAll ? newOps : [...newOps, ...operators];
+    setOperators(updated);
+    saveOperators(updated);
     if (replaceAll) {
-      setOperators(newOps);
       showToast(`Načteno ${newOps.length} operátorů ze snímku. Seznam byl přepsán.`);
     } else {
-      setOperators((prev) => [...newOps, ...prev]);
       showToast(`Přidáno ${newOps.length} operátorů ze snímku k existujícímu týmu.`);
     }
     setIsPhotoImportOpen(false);
@@ -565,7 +676,9 @@ export default function App() {
   // Delete operator
   const handleDeleteOperator = (operatorId: string) => {
     const op = operators.find((o) => o.id === operatorId);
-    setOperators((prev) => prev.filter((o) => o.id !== operatorId));
+    const updated = operators.filter((o) => o.id !== operatorId);
+    setOperators(updated);
+    saveOperators(updated);
     if (op) {
       showToast(`Operátor ${op.name} byl odebrán.`);
     }
@@ -748,16 +861,14 @@ export default function App() {
         onOpenAddModal={() => setAddEditOperator({ operator: null, defaultDeptId: 'hovc' })}
         onOpenPhotoImport={() => setIsPhotoImportOpen(true)}
         onOpenTemplatesModal={() => setIsTemplatesModalOpen(true)}
-        onOpenGoogleDriveModal={() => setIsGoogleDriveModalOpen(true)}
-        isDriveConnected={isDriveConnected}
         onOpenReportModal={() => setIsReportModalOpen(true)}
         onOpenHistoryModal={() => setIsHistoryModalOpen(true)}
         onResetData={handleResetData}
       />
 
       {/* Main Content Area */}
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 py-4 sm:py-6 space-y-4 sm:space-y-6">
-        {/* PICK Overview & Quick Report for Boss */}
+      <main className="flex-1 max-w-7xl w-full mx-auto px-3 sm:px-6 py-2.5 sm:py-4 space-y-2.5 sm:space-y-3">
+        {/* PICK Overview & Quick Report for Boss (Collapsible & Compact) */}
         <BossAnswerCard
           operators={operators}
           onOpenReportModal={() => setIsReportModalOpen(true)}
@@ -765,10 +876,10 @@ export default function App() {
 
         {/* View Mode 1: Department Columns (Board) */}
         {viewMode === 'board' && (
-          <div className="space-y-3">
-            {/* Quick jump & Drag-to-move pills bar (Sticky drop target) */}
+          <div className="space-y-2.5">
+            {/* Quick jump & Drag-to-move pills bar (Non-sticky, clean drop target) */}
             <div
-              className={`sticky top-2 z-20 transition-all rounded-2xl py-2 px-3 border shadow-xs backdrop-blur-md ${
+              className={`relative transition-all rounded-xl py-1.5 px-2.5 border shadow-2xs backdrop-blur-md ${
                 dragOverJumpDept
                   ? 'bg-blue-50/95 dark:bg-slate-900/95 border-blue-400 dark:border-blue-600 ring-2 ring-blue-400/30 shadow-md'
                   : 'bg-white/95 dark:bg-slate-900/95 border-slate-200/80 dark:border-slate-800/80'
@@ -777,7 +888,7 @@ export default function App() {
               <div className="flex items-center gap-1.5 sm:gap-2 overflow-x-auto pb-0.5 scrollbar-none">
                 <span className="text-xs font-bold shrink-0 flex items-center gap-1.5 text-slate-500 dark:text-slate-400 mr-0.5">
                   <Move className="w-3 h-3 hidden sm:inline" />
-                  <span>Přesun / Skok:</span>
+                  <span>Rychlý přesun / Skok:</span>
                 </span>
 
                 {DEPARTMENTS.map((dept) => {
@@ -905,7 +1016,7 @@ export default function App() {
               </div>
             )}
 
-            {/* Horizontal scrollable columns: HOVC, HOVS, Putaway, VAS, OBWF, VNA, OBWI */}
+            {/* Horizontal scrollable columns: Outbound, HOVS, Putaway, VAS, OBWF, VNA, OBWI */}
             <div
               id="board-columns-container"
               ref={boardContainerRef}
@@ -923,6 +1034,8 @@ export default function App() {
                     allOperators={operators}
                     totalOperatorsCount={filteredOperators.length}
                     selectedOperatorId={selectedOperatorId}
+                    bulkSelectedIds={bulkSelectedIds}
+                    onToggleBulkSelect={handleToggleBulkSelect}
                     onSelectOperator={(op) => {
                       setSelectedOperatorId((prev) => (prev === op.id ? null : op.id));
                     }}
@@ -962,6 +1075,10 @@ export default function App() {
         {viewMode === 'table' && (
           <TableView
             operators={filteredOperators}
+            bulkSelectedIds={bulkSelectedIds}
+            onToggleBulkSelect={handleToggleBulkSelect}
+            onSelectAll={handleSelectAll}
+            onClearSelection={handleClearBulkSelection}
             onOpenQuickMove={(op) => setQuickMoveOperator(op)}
             onEditOperator={(op) => setAddEditOperator({ operator: op })}
             onChangeDepartment={(operatorId, targetDeptId) =>
@@ -972,6 +1089,15 @@ export default function App() {
           />
         )}
       </main>
+
+      {/* Floating Bulk Action Bar (appears when 1 or more operators are selected via checkbox) */}
+      <BulkActionBar
+        selectedCount={bulkSelectedIds.size}
+        totalOperatorsCount={operators.length}
+        onClearSelection={handleClearBulkSelection}
+        onSelectAll={handleSelectAll}
+        onBulkMove={handleBulkMove}
+      />
 
       {/* Floating Bottom Toast Notification */}
       {toastMessage && (
@@ -1021,7 +1147,6 @@ export default function App() {
           isOpen={isReportModalOpen}
           operators={operators}
           onClose={() => setIsReportModalOpen(false)}
-          onOpenGoogleDrive={() => setIsGoogleDriveModalOpen(true)}
         />
       )}
 
@@ -1066,19 +1191,6 @@ export default function App() {
           onApplyTemplate={handleApplyTemplate}
         />
       )}
-
-      {/* Google Drive Integration Modal (Backups, Reports, Cloud Sync) */}
-      <GoogleDriveModal
-        isOpen={isGoogleDriveModalOpen}
-        onClose={() => setIsGoogleDriveModalOpen(false)}
-        operators={operators}
-        onRestoreOperators={(restoredOps) => {
-          setOperators(restoredOps);
-          saveOperators(restoredOps);
-          showToast(`Obsazení směny obnoveno z Google Disku (${restoredOps.length} operátorů).`);
-        }}
-        showToast={(msg, type) => showToast(msg, type === 'error')}
-      />
     </div>
   );
 }

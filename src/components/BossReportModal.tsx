@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, Copy, Check, MessageSquare, HardDrive } from 'lucide-react';
+import { X, Copy, Check, MessageSquare } from 'lucide-react';
 import { DEPARTMENTS } from '../data/departments';
 import { Operator } from '../types';
 
@@ -7,14 +7,12 @@ interface BossReportModalProps {
   operators: Operator[];
   isOpen: boolean;
   onClose: () => void;
-  onOpenGoogleDrive?: () => void;
 }
 
 export const BossReportModal: React.FC<BossReportModalProps> = ({
   operators,
   isOpen,
   onClose,
-  onOpenGoogleDrive,
 }) => {
   const [includeNames, setIncludeNames] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -149,21 +147,6 @@ export const BossReportModal: React.FC<BossReportModalProps> = ({
           </button>
 
           <div className="flex items-center gap-2">
-            {onOpenGoogleDrive && (
-              <button
-                id="boss-report-save-drive-btn"
-                onClick={() => {
-                  onClose();
-                  onOpenGoogleDrive();
-                }}
-                className="inline-flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl text-xs sm:text-sm font-bold border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-750 text-slate-800 dark:text-slate-200 transition-colors shadow-2xs"
-                title="Otevřít Google Disk a uložit toto hlášení"
-              >
-                <HardDrive className="w-4 h-4 text-blue-600 dark:text-blue-400" />
-                <span>Uložit na Disk</span>
-              </button>
-            )}
-
             <button
               id="copy-boss-report-text-btn"
               onClick={handleCopy}

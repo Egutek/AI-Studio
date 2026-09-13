@@ -11,23 +11,26 @@ export const loadOperators = (): Operator[] => {
     if (saved) {
       const parsed = JSON.parse(saved);
       if (Array.isArray(parsed) && parsed.length > 0) {
-        // Ensure operators are real operators, if old mock list was stored, upgrade to INITIAL_OPERATORS
-        const isRealCrew = parsed.some((op: Operator) => op.name === 'Andrii Gurkot' || op.name === 'Hemzáček Lukáš (TL)');
-        if (isRealCrew) {
-          return parsed.map((op: Operator) => ({ ...op, isVnaOnly: false }));
-        }
+        return parsed.map((op: Operator) => ({
+          ...op,
+          // Guarantee valid machineType format
+          machineType: op.machineType || 'NONE',
+        }));
       }
     }
   } catch (e) {
     console.error('Failed to load operators from localStorage', e);
   }
-  // Default to real 65 operators
+  // Default to initial operators on first run
   return INITIAL_OPERATORS;
 };
 
 export const saveOperators = (operators: Operator[]): void => {
   try {
-    localStorage.setItem(OPERATORS_KEY, JSON.stringify(operators));
+    if (Array.isArray(operators) && operators.length > 0) {
+      localStorage.setItem(OPERATORS_KEY, JSON.stringify(operators));
+      localStorage.setItem('zf_last_saved_timestamp', new Date().toISOString());
+    }
   } catch (e) {
     console.error('Failed to save operators to localStorage', e);
   }

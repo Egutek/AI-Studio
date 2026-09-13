@@ -64,7 +64,7 @@ export const WidgetView: React.FC<WidgetViewProps> = ({ operators }) => {
   const copyWidgetText = () => {
     const text = `📊 ZF OSTROV - ODDĚLENÍ PICK (${dateStr} ${timeStr})
 👥 Celkem PICK: ${total} lidí (${llTotal}× LL, ${rtrTotal}× RTR)
-📦 HOVC: ${hovcOps.length} (${hovcOps.filter((o) => o.machineType === 'LL').length} LL / ${hovcOps.filter((o) => o.machineType === 'RTR').length} RTR)
+📦 Outbound: ${hovcOps.length} (${hovcOps.filter((o) => o.machineType === 'LL').length} LL / ${hovcOps.filter((o) => o.machineType === 'RTR').length} RTR)
 🏢 HOVS: ${hovsOps.length} (${hovsOps.filter((o) => o.machineType === 'LL').length} LL / ${hovsOps.filter((o) => o.machineType === 'RTR').length} RTR)
 📥 Putaway: ${putawayOps.length} (${putawayOps.filter((o) => o.machineType === 'LL').length} LL / ${putawayOps.filter((o) => o.machineType === 'RTR').length} RTR)
 🔧 VAS: ${vasOps.length} (${vasOps.filter((o) => o.machineType === 'LL').length} LL / ${vasOps.filter((o) => o.machineType === 'RTR').length} RTR)
@@ -189,12 +189,12 @@ Aktivně: ${activeTotal} | Pauza: ${breakTotal} | Absence: ${absenceTotal}`;
 
           {/* 7 PICK SUB-DEPARTMENTS GRID */}
           <div className="grid grid-cols-2 gap-2.5 mb-4">
-            {/* HOVC */}
+            {/* Outbound */}
             <div className="bg-slate-900/90 border border-slate-800 hover:border-blue-500/50 rounded-xl p-3 flex flex-col justify-between transition-colors">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-1.5">
                   <PackageCheck className="w-4 h-4 text-blue-400" />
-                  <span className="font-extrabold text-sm text-white">HOVC</span>
+                  <span className="font-extrabold text-sm text-white">Outbound</span>
                 </div>
                 <span className="text-2xl font-black text-blue-400">{hovcOps.length}</span>
               </div>

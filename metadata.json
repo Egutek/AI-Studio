@@ -1,6 +1,6 @@
 {
   "name": "ZF Operativa Ostrov",
-  "description": "Operační řízení a přesuny operátorů oddělení PICK (HOVC, HOVS, Putaway, VAS, OBWF, VNA, OBWI) v ZF Aftermarket Ostrov se šablonami obsazení směn, automatickým odečtem absencí, Google Disk zálohováním a historií.",
+  "description": "Operační řízení a přesuny operátorů oddělení PICK (VNA, HOVS, Putaway, Outbound, VAS, OBWI, OBWF, Absence) v ZF Aftermarket Ostrov se šablonami obsazení směn a historií.",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }
