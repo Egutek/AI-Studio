@@ -1,0 +1,20 @@
+services:
+  app:
+    image: node:22-slim
+    working_dir: /app
+    volumes:
+      - ./:/app
+      - node_modules:/app/node_modules
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=development
+      # Vite >= 6.1 appends this to allowedHosts so the preview origin is accepted
+      - __VITE_ADDITIONAL_SERVER_ALLOWED_HOSTS
+    command: sh -c "npm install --no-audit --no-fund && npx tsx server.ts"
+    env_file:
+      - /run/base44/app.env
+    restart: unless-stopped
+
+volumes:
+  node_modules:
