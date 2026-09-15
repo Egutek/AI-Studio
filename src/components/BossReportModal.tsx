@@ -1,16 +1,20 @@
 import React, { useState } from 'react';
 import { X, Copy, Check, MessageSquare } from 'lucide-react';
 import { DEPARTMENTS } from '../data/departments';
-import { Operator } from '../types';
+import { Department, Operator, ShiftCode } from '../types';
 
 interface BossReportModalProps {
   operators: Operator[];
+  customDepartments?: Department[];
+  activeShift?: ShiftCode;
   isOpen: boolean;
   onClose: () => void;
 }
 
 export const BossReportModal: React.FC<BossReportModalProps> = ({
   operators,
+  customDepartments = [],
+  activeShift = 'A',
   isOpen,
   onClose,
 }) => {
@@ -42,8 +46,8 @@ export const BossReportModal: React.FC<BossReportModalProps> = ({
 
   const generateReportText = () => {
     let report = `📋 HLÁŠENÍ ODDĚLENÍ PICK - ZF AFTERMARKET OSTROV\n`;
-    report += `Datum a čas: ${dateStr} v ${timeStr}\n`;
-    report += `V provozu na hale: ${activeTotal} lidí (z ${total} na směně | ${llTotal}× LL, ${rtrTotal}× RTR)\n`;
+    report += `Směna: ${activeShift} | Datum a čas: ${dateStr} v ${timeStr}\n`;
+    report += `V provozu na hale: ${activeTotal} lidí (z ${total} na směně ${activeShift} | ${llTotal}× LL, ${rtrTotal}× RTR)\n`;
     report += `----------------------------------------\n`;
 
     DEPARTMENTS.filter((d) => d.id !== 'unassigned').forEach((dept) => {
@@ -58,10 +62,31 @@ export const BossReportModal: React.FC<BossReportModalProps> = ({
       }
     });
 
+    if (customDepartments.length > 0) {
+      report += `\n--- VÍCEPRÁCE A MIMOŘÁDNÉ ÚKOLY ---\n`;
+      customDepartments.forEach((dept) => {
+        const ops = getDeptOps(dept.id).filter((o) => o.status !== 'absence');
+        const ll = ops.filter((o) => o.machineType === 'LL').length;
+        const rtr = ops.filter((o) => o.machineType === 'RTR').length;
+
+        report += `• ${dept.name} (${dept.code}): ${ops.length} lidí (${ll}× LL, ${rtr}× RTR)\n`;
+
+        if (includeNames && ops.length > 0) {
+          report += `  ${ops.map((o) => `${o.name} (${o.machineType})`).join(', ')}\n`;
+        }
+      });
+    }
+
     if (absenceOps.length > 0) {
-      report += `• Absence / Doma: ${absenceOps.length} lidí\n`;
+      const dovo = absenceOps.filter((o) => o.absenceReason === 'Dovolená');
+      const pn = absenceOps.filter((o) => o.absenceReason === 'PN');
+      const abs = absenceOps.filter((o) => !o.absenceReason || o.absenceReason === 'Absence');
+
+      report += `\n• Nepřítomen celkem: ${absenceOps.length} lidí (Dovolená: ${dovo.length}, PN: ${pn.length}, Absence: ${abs.length})\n`;
       if (includeNames) {
-        report += `  ${absenceOps.map((o) => `${o.name} (${o.machineType})`).join(', ')}\n`;
+        if (dovo.length > 0) report += `  - Dovolená (${dovo.length}): ${dovo.map((o) => o.name).join(', ')}\n`;
+        if (pn.length > 0) report += `  - PN (${pn.length}): ${pn.map((o) => o.name).join(', ')}\n`;
+        if (abs.length > 0) report += `  - Absence (${abs.length}): ${abs.map((o) => o.name).join(', ')}\n`;
       }
     }
 

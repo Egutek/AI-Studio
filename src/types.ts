@@ -1,4 +1,4 @@
-export type DepartmentId =
+export type BuiltinDepartmentId =
   | 'hovc'
   | 'hovs'
   | 'putaway'
@@ -8,9 +8,15 @@ export type DepartmentId =
   | 'obwi'
   | 'unassigned';
 
+export type DepartmentId = BuiltinDepartmentId | (string & {});
+
 export type MachineType = 'LL' | 'RTR' | 'NONE';
 
 export type OperatorStatus = 'active' | 'break' | 'absence';
+
+export type ShiftCode = 'A' | 'B' | 'C';
+
+export type AbsenceReason = 'Absence' | 'Dovolená' | 'PN';
 
 export interface Department {
   id: DepartmentId;
@@ -24,6 +30,9 @@ export interface Department {
   borderColor: string;
   iconName: string;
   targetCount: number;
+  isCustom?: boolean;
+  shift?: ShiftCode;
+  createdAt?: string;
 }
 
 export interface Operator {
@@ -33,6 +42,8 @@ export interface Operator {
   departmentId: DepartmentId;
   isVnaOnly?: boolean; // Volitelný příznak (odemčeno pro volný přesun)
   status: OperatorStatus;
+  shift?: ShiftCode; // 'A' | 'B' | 'C'
+  absenceReason?: AbsenceReason; // 'Absence' | 'Dovolená' | 'PN'
   notes?: string;
   lastMovedAt: string; // ISO string
 }
@@ -45,6 +56,7 @@ export interface MoveHistoryRecord {
   fromDept: DepartmentId;
   toDept: DepartmentId;
   timestamp: string;
+  shift?: ShiftCode;
   reason?: string;
 }
 
@@ -57,6 +69,9 @@ export interface UndoOperation {
   toDept: DepartmentId;
   fromStatus?: OperatorStatus;
   toStatus?: OperatorStatus;
+  shift?: ShiftCode;
+  fromAbsenceReason?: AbsenceReason;
+  toAbsenceReason?: AbsenceReason;
   timestamp: string;
 }
 
@@ -77,6 +92,7 @@ export interface ShiftTemplate {
   isBuiltIn?: boolean;
   operatorCount: number;
   activeCount: number;
+  shift?: ShiftCode | 'all';
   assignments: ShiftTemplateAssignment[];
 }
 

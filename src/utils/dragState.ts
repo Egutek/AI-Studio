@@ -4,6 +4,7 @@ import { Operator } from '../types';
 export interface DragState {
   operatorId: string | null;
   operatorName: string | null;
+  operatorIds: string[];
   fromDeptId: string | null;
   isDragging: boolean;
 }
@@ -13,6 +14,7 @@ export interface DragState {
 const globalDragState: DragState = {
   operatorId: null,
   operatorName: null,
+  operatorIds: [],
   fromDeptId: null,
   isDragging: false,
 };
@@ -33,13 +35,18 @@ export const subscribeDragState = (listener: DragListener) => {
   };
 };
 
-export const startGlobalDrag = (operator: Operator) => {
+export const startGlobalDrag = (operator: Operator, bulkIds?: string[]) => {
   if (clearTimer) {
     clearTimeout(clearTimer);
     clearTimer = null;
   }
+  const ids = bulkIds && bulkIds.length > 0 && bulkIds.includes(operator.id)
+    ? bulkIds
+    : [operator.id];
+
   globalDragState.operatorId = operator.id;
   globalDragState.operatorName = operator.name;
+  globalDragState.operatorIds = ids;
   globalDragState.fromDeptId = operator.departmentId;
   globalDragState.isDragging = true;
   notifyDragChange();
@@ -49,11 +56,12 @@ export const endGlobalDrag = () => {
   globalDragState.isDragging = false;
   notifyDragChange();
 
-  // Keep operatorId and operatorName alive for 1200ms so any asynchronous or queued drop event has access
+  // Keep operatorId and operatorIds alive for 1200ms so any asynchronous or queued drop event has access
   if (clearTimer) clearTimeout(clearTimer);
   clearTimer = setTimeout(() => {
     globalDragState.operatorId = null;
     globalDragState.operatorName = null;
+    globalDragState.operatorIds = [];
     globalDragState.fromDeptId = null;
     notifyDragChange();
   }, 1200);
@@ -64,11 +72,37 @@ export const getGlobalDragState = (): DragState => ({
 });
 
 /**
- * Resolves the operator being dropped using multiple fallback strategies:
- * 1. application/x-operator-id from dataTransfer
- * 2. text/plain from dataTransfer
- * 3. in-memory globalDragState operatorId
- * 4. match operator by exact name if text string was dragged
+ * Resolves all operator IDs being dropped (supports single or multi-drag):
+ */
+export const resolveOperatorIdsFromDrop = (
+  e: React.DragEvent,
+  operators: Operator[]
+): string[] => {
+  // 1. Check for bulk operator JSON array in dataTransfer
+  try {
+    const bulkJson = e.dataTransfer.getData('application/x-bulk-operator-ids');
+    if (bulkJson) {
+      const parsed = JSON.parse(bulkJson);
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        return parsed;
+      }
+    }
+  } catch {
+    // Ignore JSON or permission error
+  }
+
+  // 2. Check global memory state if multiple operators were dragged
+  if (globalDragState.operatorIds && globalDragState.operatorIds.length > 0) {
+    return globalDragState.operatorIds;
+  }
+
+  // 3. Fallback to single operator resolver
+  const single = resolveOperatorFromDrop(e, operators);
+  return single ? [single.id] : [];
+};
+
+/**
+ * Resolves the primary operator being dropped using multiple fallback strategies
  */
 export const resolveOperatorFromDrop = (
   e: React.DragEvent,

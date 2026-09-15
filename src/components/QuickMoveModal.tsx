@@ -13,28 +13,34 @@ import {
   Check,
 } from 'lucide-react';
 import { DEPARTMENTS } from '../data/departments';
-import { DepartmentId, Operator } from '../types';
+import { AbsenceReason, Department, DepartmentId, Operator } from '../types';
 
 interface QuickMoveModalProps {
   operator: Operator | null;
   operators: Operator[];
+  customDepartments?: Department[];
   isOpen: boolean;
   onClose: () => void;
-  onMove: (targetDeptId: DepartmentId) => void;
+  onMove: (targetDeptId: DepartmentId, absenceReason?: AbsenceReason) => void;
 }
 
 export const QuickMoveModal: React.FC<QuickMoveModalProps> = ({
   operator,
   operators,
+  customDepartments = [],
   isOpen,
   onClose,
   onMove,
 }) => {
   if (!isOpen || !operator) return null;
 
-  const currentDept = DEPARTMENTS.find((d) => d.id === operator.departmentId);
+  const allDepts = [...DEPARTMENTS, ...customDepartments];
+  const currentDept = allDepts.find((d) => d.id === operator.departmentId);
 
-  const getDeptIcon = (id: DepartmentId) => {
+  const getDeptIcon = (id: DepartmentId, isCustom?: boolean) => {
+    if (isCustom) {
+      return <Wrench className="w-5 h-5 text-amber-500" />;
+    }
     switch (id) {
       case 'hovc':
         return <PackageCheck className="w-5 h-5 text-blue-500" />;
@@ -126,6 +132,65 @@ export const QuickMoveModal: React.FC<QuickMoveModalProps> = ({
               const isCurrent = dept.id === operator.departmentId;
               const count = getCountForDept(dept.id);
 
+              if (dept.id === 'unassigned') {
+                return (
+                  <div
+                    key={dept.id}
+                    className={`sm:col-span-2 p-3 rounded-xl border transition-all ${
+                      isCurrent
+                        ? 'bg-slate-50 dark:bg-slate-800/60 border-slate-300 dark:border-slate-700'
+                        : 'bg-white dark:bg-slate-800/80 border-slate-200 dark:border-slate-700'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="flex items-center gap-2.5">
+                        <div className="p-2 rounded-lg bg-slate-100 dark:bg-slate-700/60 text-slate-500">
+                          {getDeptIcon(dept.id)}
+                        </div>
+                        <div>
+                          <span className="font-bold text-sm text-slate-900 dark:text-white">
+                            {dept.name}
+                          </span>
+                          <span className="text-[11px] text-slate-400 block">
+                            Zvolte důvod nepřítomnosti:
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="text-right">
+                        <span className="text-xs font-semibold px-2 py-1 rounded-md bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-200">
+                          {count} lidí
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-3 gap-2 mt-2">
+                      {(['Absence', 'Dovolená', 'PN'] as AbsenceReason[]).map((reason) => {
+                        const isReasonCurrent = isCurrent && operator.absenceReason === reason;
+                        return (
+                          <button
+                            key={reason}
+                            type="button"
+                            onClick={() => {
+                              onMove('unassigned', reason);
+                              onClose();
+                            }}
+                            className={`py-1.5 px-2 rounded-lg border text-center transition-all cursor-pointer text-xs font-bold ${
+                              isReasonCurrent
+                                ? 'border-blue-600 bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 ring-2 ring-blue-500/30'
+                                : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:border-slate-400 text-slate-700 dark:text-slate-200'
+                            }`}
+                          >
+                            {isReasonCurrent && '✓ '}
+                            {reason}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                );
+              }
+
               return (
                 <button
                   key={dept.id}
@@ -167,6 +232,65 @@ export const QuickMoveModal: React.FC<QuickMoveModalProps> = ({
               );
             })}
           </div>
+
+          {/* Custom / Extra Work Departments */}
+          {customDepartments.length > 0 && (
+            <div className="mt-4 pt-3 border-t border-slate-200 dark:border-slate-800">
+              <p className="text-xs font-bold uppercase tracking-wider text-amber-600 dark:text-amber-400 mb-2 flex items-center gap-1.5">
+                <Wrench className="w-3.5 h-3.5" />
+                <span>Mimořádné úkoly a vícepráce:</span>
+              </p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                {customDepartments.map((dept) => {
+                  const isCurrent = dept.id === operator.departmentId;
+                  const count = getCountForDept(dept.id);
+
+                  return (
+                    <button
+                      key={dept.id}
+                      id={`move-to-${dept.id}-btn`}
+                      disabled={isCurrent}
+                      onClick={() => {
+                        onMove(dept.id);
+                        onClose();
+                      }}
+                      className={`flex items-center justify-between p-3 rounded-xl border border-dashed text-left transition-all ${
+                        isCurrent
+                          ? 'bg-amber-50/50 dark:bg-amber-950/20 border-amber-300 dark:border-amber-800/60 opacity-60 cursor-not-allowed'
+                          : 'bg-amber-50/30 dark:bg-amber-950/10 border-amber-300 dark:border-amber-700/60 hover:border-amber-500 hover:bg-amber-50 dark:hover:bg-amber-950/30 hover:shadow-md hover:scale-[1.01] active:scale-[0.99]'
+                      }`}
+                    >
+                      <div className="flex items-center gap-3 min-w-0">
+                        <div className="p-2 rounded-lg bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300 shrink-0">
+                          {getDeptIcon(dept.id, true)}
+                        </div>
+                        <div className="min-w-0">
+                          <span className="font-bold text-sm text-slate-900 dark:text-white truncate block">
+                            {dept.name}
+                          </span>
+                          <span className="text-[10px] text-amber-600 dark:text-amber-400 font-mono">
+                            {dept.code}
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="text-right shrink-0">
+                        {isCurrent ? (
+                          <span className="inline-flex items-center gap-1 text-xs font-semibold text-amber-800 bg-amber-200/70 dark:bg-amber-900/60 px-2 py-0.5 rounded-md">
+                            <Check className="w-3 h-3" /> Zde
+                          </span>
+                        ) : (
+                          <span className="text-xs font-semibold px-2 py-1 rounded-md bg-amber-100 dark:bg-amber-900/40 text-amber-800 dark:text-amber-300">
+                            {count} lidí
+                          </span>
+                        )}
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Footer */}

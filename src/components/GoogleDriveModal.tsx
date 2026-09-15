@@ -122,6 +122,7 @@ export const GoogleDriveModal: React.FC<GoogleDriveModalProps> = ({
   };
 
   const handleSignIn = async () => {
+    if (isSigningIn) return;
     setIsSigningIn(true);
     try {
       const result = await googleSignIn();
@@ -132,7 +133,16 @@ export const GoogleDriveModal: React.FC<GoogleDriveModalProps> = ({
         await loadDriveData(result.accessToken);
       }
     } catch (err: any) {
-      console.error('Google Sign in failed:', err);
+      const code = err?.code;
+      if (
+        code === 'auth/popup-closed-by-user' ||
+        code === 'auth/cancelled-popup-request' ||
+        code === 'auth/user-cancelled'
+      ) {
+        // User closed or dismissed popup, no error toast needed
+        return;
+      }
+      console.warn('Google Sign in issue:', err);
       showToast(
         err.message || 'Přihlášení selhalo. Zkontrolujte, zda máte povolená vyskakovací okna.',
         'error'
@@ -433,7 +443,7 @@ export const GoogleDriveModal: React.FC<GoogleDriveModalProps> = ({
                   id="google-drive-sign-in-btn"
                   disabled={isSigningIn}
                   onClick={handleSignIn}
-                  className="inline-flex items-center gap-3 px-5 py-2.5 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-750 text-slate-700 dark:text-slate-200 text-xs sm:text-sm font-semibold shadow-xs hover:shadow-md transition-all active:scale-98 disabled:opacity-60 cursor-pointer"
+                  className="inline-flex items-center gap-3 px-5 py-2.5 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs sm:text-sm font-semibold shadow-xs hover:shadow-md transition-all active:scale-98 disabled:opacity-60 cursor-pointer"
                 >
                   {isSigningIn ? (
                     <>
@@ -511,7 +521,7 @@ export const GoogleDriveModal: React.FC<GoogleDriveModalProps> = ({
                   id="google-drive-refresh-btn"
                   onClick={() => accessToken && loadDriveData(accessToken)}
                   disabled={isLoadingFiles}
-                  className="px-2.5 py-1.5 text-xs font-semibold rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-750 flex items-center gap-1.5 transition-colors"
+                  className="px-2.5 py-1.5 text-xs font-semibold rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 flex items-center gap-1.5 transition-colors"
                   title="Obnovit soubory"
                 >
                   <RefreshCw className={`w-3.5 h-3.5 ${isLoadingFiles ? 'animate-spin' : ''}`} />

@@ -609,6 +609,179 @@ export const INITIAL_OPERATORS: Operator[] = [
     departmentId: 'obwi',
     status: 'active',
     isVnaOnly: false,
+    shift: 'A',
     lastMovedAt: new Date(Date.now() - 1000 * 60 * 15).toISOString(),
   },
 ];
+
+// Ensure all Shift A operators have shift: 'A' explicitly set
+export const INITIAL_OPERATORS_SHIFT_A: Operator[] = INITIAL_OPERATORS.map((op) => ({
+  ...op,
+  shift: 'A' as const,
+}));
+
+// Reálný tým 60 operátorů pro Směnu B (všechna oddělení PICK)
+export const INITIAL_OPERATORS_SHIFT_B: Operator[] = [
+  // --- Outbound / HOVC (10 operátorů) ---
+  { id: 'op-b-1', name: 'Petr Dvořák', machineType: 'LL', departmentId: 'hovc', status: 'active', shift: 'B', lastMovedAt: new Date(Date.now() - 1000 * 60 * 45).toISOString() },
+  { id: 'op-b-2', name: 'Martin Černý', machineType: 'RTR', departmentId: 'hovc', status: 'active', shift: 'B', lastMovedAt: new Date(Date.now() - 1000 * 60 * 120).toISOString() },
+  { id: 'op-b-3', name: 'Tomáš Procházka', machineType: 'LL', departmentId: 'hovc', status: 'active', shift: 'B', lastMovedAt: new Date(Date.now() - 1000 * 60 * 90).toISOString() },
+  { id: 'op-b-4', name: 'Jiří Kučera', machineType: 'RTR', departmentId: 'hovc', status: 'active', shift: 'B', lastMovedAt: new Date(Date.now() - 1000 * 60 * 30).toISOString() },
+  { id: 'op-b-5', name: 'Michal Veselý', machineType: 'LL', departmentId: 'hovc', status: 'active', shift: 'B', lastMovedAt: new Date(Date.now() - 1000 * 60 * 150).toISOString() },
+  { id: 'op-b-6', name: 'Jakub Horák', machineType: 'LL', departmentId: 'hovc', status: 'active', shift: 'B', lastMovedAt: new Date(Date.now() - 1000 * 60 * 200).toISOString() },
+  { id: 'op-b-7', name: 'Jan Němec', machineType: 'RTR', departmentId: 'hovc', status: 'active', shift: 'B', lastMovedAt: new Date(Date.now() - 1000 * 60 * 60).toISOString() },
+  { id: 'op-b-8', name: 'Lukáš Marek', machineType: 'LL', departmentId: 'hovc', status: 'active', shift: 'B', lastMovedAt: new Date(Date.now() - 1000 * 60 * 180).toISOString() },
+  { id: 'op-b-9', name: 'David Pokorný', machineType: 'RTR', departmentId: 'hovc', status: 'active', shift: 'B', lastMovedAt: new Date(Date.now() - 1000 * 60 * 110).toISOString() },
+  { id: 'op-b-10', name: 'Filip Pospíšil', machineType: 'LL', departmentId: 'hovc', status: 'active', shift: 'B', lastMovedAt: new Date(Date.now() - 1000 * 60 * 40).toISOString() },
+
+  // --- HOVS (10 operátorů) ---
+  { id: 'op-b-11', name: 'Martin Hájek', machineType: 'RTR', departmentId: 'hovs', status: 'active', shift: 'B', lastMovedAt: new Date(Date.now() - 1000 * 60 * 80).toISOString() },
+  { id: 'op-b-12', name: 'Václav Král', machineType: 'LL', departmentId: 'hovs', status: 'active', shift: 'B', lastMovedAt: new Date(Date.now() - 1000 * 60 * 50).toISOString() },
+  { id: 'op-b-13', name: 'Tomáš Jelínek', machineType: 'RTR', departmentId: 'hovs', status: 'active', shift: 'B', lastMovedAt: new Date(Date.now() - 1000 * 60 * 140).toISOString() },
+  { id: 'op-b-14', name: 'Zdeněk Růžička', machineType: 'LL', departmentId: 'hovs', status: 'active', shift: 'B', lastMovedAt: new Date(Date.now() - 1000 * 60 * 20).toISOString() },
+  { id: 'op-b-15', name: 'Jan Beneš', machineType: 'RTR', departmentId: 'hovs', status: 'active', shift: 'B', lastMovedAt: new Date(Date.now() - 1000 * 60 * 160).toISOString() },
+  { id: 'op-b-16', name: 'Karel Fiala', machineType: 'LL', departmentId: 'hovs', status: 'active', shift: 'B', lastMovedAt: new Date(Date.now() - 1000 * 60 * 95).toISOString() },
+  { id: 'op-b-17', name: 'Ondřej Sedláček', machineType: 'RTR', departmentId: 'hovs', status: 'active', shift: 'B', lastMovedAt: new Date(Date.now() - 1000 * 60 * 70).toISOString() },
+  { id: 'op-b-18', name: 'Roman Zeman', machineType: 'RTR', departmentId: 'hovs', status: 'active', shift: 'B', notes: 'Team leader HOVS', lastMovedAt: new Date(Date.now() - 1000 * 60 * 30).toISOString() },
+  { id: 'op-b-19', name: 'Michal Kolář', machineType: 'LL', departmentId: 'hovs', status: 'active', shift: 'B', lastMovedAt: new Date(Date.now() - 1000 * 60 * 115).toISOString() },
+  { id: 'op-b-20', name: 'Tomáš Navrátil', machineType: 'RTR', departmentId: 'hovs', status: 'active', shift: 'B', lastMovedAt: new Date(Date.now() - 1000 * 60 * 25).toISOString() },
+
+  // --- Putaway (10 operátorů) ---
+  { id: 'op-b-21', name: 'Milan Čermák', machineType: 'LL', departmentId: 'putaway', status: 'active', shift: 'B', lastMovedAt: new Date(Date.now() - 1000 * 60 * 65).toISOString() },
+  { id: 'op-b-22', name: 'Libor Vaněk', machineType: 'RTR', departmentId: 'putaway', status: 'active', shift: 'B', lastMovedAt: new Date(Date.now() - 1000 * 60 * 130).toISOString() },
+  { id: 'op-b-23', name: 'Aleš Urban', machineType: 'LL', departmentId: 'putaway', status: 'active', shift: 'B', lastMovedAt: new Date(Date.now() - 1000 * 60 * 45).toISOString() },
+  { id: 'op-b-24', name: 'Radim Blažek', machineType: 'RTR', departmentId: 'putaway', status: 'active', shift: 'B', lastMovedAt: new Date(Date.now() - 1000 * 60 * 85).toISOString() },
+  { id: 'op-b-25', name: 'Vladimír Kříž', machineType: 'LL', departmentId: 'putaway', status: 'active', shift: 'B', lastMovedAt: new Date(Date.now() - 1000 * 60 * 105).toISOString() },
+  { id: 'op-b-26', name: 'Daniel Kratochvíl', machineType: 'RTR', departmentId: 'putaway', status: 'active', shift: 'B', lastMovedAt: new Date(Date.now() - 1000 * 60 * 15).toISOString() },
+  { id: 'op-b-27', name: 'Stanislav Kovář', machineType: 'LL', departmentId: 'putaway', status: 'active', shift: 'B', lastMovedAt: new Date(Date.now() - 1000 * 60 * 175).toISOString() },
+  { id: 'op-b-28', name: 'Viktor Bartoš', machineType: 'RTR', departmentId: 'putaway', status: 'active', shift: 'B', notes: 'Putaway koordinátor', lastMovedAt: new Date(Date.now() - 1000 * 60 * 55).toISOString() },
+  { id: 'op-b-29', name: 'Boris Vlček', machineType: 'LL', departmentId: 'putaway', status: 'active', shift: 'B', lastMovedAt: new Date(Date.now() - 1000 * 60 * 140).toISOString() },
+  { id: 'op-b-30', name: 'Emil Holub', machineType: 'RTR', departmentId: 'putaway', status: 'active', shift: 'B', lastMovedAt: new Date(Date.now() - 1000 * 60 * 35).toISOString() },
+
+  // --- VAS (9 operátorů) ---
+  { id: 'op-b-31', name: 'Simona Dvořáková', machineType: 'LL', departmentId: 'vas', status: 'active', shift: 'B', lastMovedAt: new Date(Date.now() - 1000 * 60 * 50).toISOString() },
+  { id: 'op-b-32', name: 'Monika Novotná', machineType: 'LL', departmentId: 'vas', status: 'active', shift: 'B', lastMovedAt: new Date(Date.now() - 1000 * 60 * 110).toISOString() },
+  { id: 'op-b-33', name: 'Igor Štěpánek', machineType: 'RTR', departmentId: 'vas', status: 'active', shift: 'B', lastMovedAt: new Date(Date.now() - 1000 * 60 * 40).toISOString() },
+  { id: 'op-b-34', name: 'Lucie Procházková', machineType: 'LL', departmentId: 'vas', status: 'active', shift: 'B', lastMovedAt: new Date(Date.now() - 1000 * 60 * 90).toISOString() },
+  { id: 'op-b-35', name: 'René Kopecký', machineType: 'RTR', departmentId: 'vas', status: 'active', shift: 'B', lastMovedAt: new Date(Date.now() - 1000 * 60 * 135).toISOString() },
+  { id: 'op-b-36', name: 'Patrik Šmíd', machineType: 'LL', departmentId: 'vas', status: 'active', shift: 'B', lastMovedAt: new Date(Date.now() - 1000 * 60 * 75).toISOString() },
+  { id: 'op-b-37', name: 'Richard Beran', machineType: 'LL', departmentId: 'vas', status: 'active', shift: 'B', lastMovedAt: new Date(Date.now() - 1000 * 60 * 165).toISOString() },
+  { id: 'op-b-38', name: 'Erik Tichý', machineType: 'RTR', departmentId: 'vas', status: 'active', shift: 'B', lastMovedAt: new Date(Date.now() - 1000 * 60 * 25).toISOString() },
+  { id: 'op-b-39', name: 'Tereza Králová', machineType: 'LL', departmentId: 'vas', status: 'active', shift: 'B', lastMovedAt: new Date(Date.now() - 1000 * 60 * 85).toISOString() },
+
+  // --- OBWF (8 operátorů) ---
+  { id: 'op-b-40', name: 'Robert Richter', machineType: 'RTR', departmentId: 'obwf', status: 'active', shift: 'B', lastMovedAt: new Date(Date.now() - 1000 * 60 * 30).toISOString() },
+  { id: 'op-b-41', name: 'Marian Soukup', machineType: 'LL', departmentId: 'obwf', status: 'active', shift: 'B', lastMovedAt: new Date(Date.now() - 1000 * 60 * 125).toISOString() },
+  { id: 'op-b-42', name: 'Vladislav Dušek', machineType: 'RTR', departmentId: 'obwf', status: 'active', shift: 'B', lastMovedAt: new Date(Date.now() - 1000 * 60 * 60).toISOString() },
+  { id: 'op-b-43', name: 'Kamil Janda', machineType: 'LL', departmentId: 'obwf', status: 'active', shift: 'B', lastMovedAt: new Date(Date.now() - 1000 * 60 * 145).toISOString() },
+  { id: 'op-b-44', name: 'Norbert Vávra', machineType: 'RTR', departmentId: 'obwf', status: 'active', shift: 'B', lastMovedAt: new Date(Date.now() - 1000 * 60 * 70).toISOString() },
+  { id: 'op-b-45', name: 'Alexej Hruška', machineType: 'LL', departmentId: 'obwf', status: 'active', shift: 'B', lastMovedAt: new Date(Date.now() - 1000 * 60 * 95).toISOString() },
+  { id: 'op-b-46', name: 'Denis Matoušek', machineType: 'RTR', departmentId: 'obwf', status: 'active', shift: 'B', lastMovedAt: new Date(Date.now() - 1000 * 60 * 40).toISOString() },
+  { id: 'op-b-47', name: 'Ivan Polák', machineType: 'LL', departmentId: 'obwf', status: 'active', shift: 'B', lastMovedAt: new Date(Date.now() - 1000 * 60 * 115).toISOString() },
+
+  // --- VNA (7 operátorů) ---
+  { id: 'op-b-48', name: 'Eduard Štěrba', machineType: 'RTR', departmentId: 'vna', status: 'active', shift: 'B', lastMovedAt: new Date(Date.now() - 1000 * 60 * 60).toISOString() },
+  { id: 'op-b-49', name: 'Gabriel Tesař', machineType: 'RTR', departmentId: 'vna', status: 'active', shift: 'B', notes: 'Team leader VNA', lastMovedAt: new Date(Date.now() - 1000 * 60 * 30).toISOString() },
+  { id: 'op-b-50', name: 'Igor Moravec', machineType: 'RTR', departmentId: 'vna', status: 'active', shift: 'B', lastMovedAt: new Date(Date.now() - 1000 * 60 * 100).toISOString() },
+  { id: 'op-b-51', name: 'Marcel Švec', machineType: 'RTR', departmentId: 'vna', status: 'active', shift: 'B', lastMovedAt: new Date(Date.now() - 1000 * 60 * 45).toISOString() },
+  { id: 'op-b-52', name: 'Oliver Bárta', machineType: 'RTR', departmentId: 'vna', status: 'active', shift: 'B', lastMovedAt: new Date(Date.now() - 1000 * 60 * 85).toISOString() },
+  { id: 'op-b-53', name: 'Sebastian Liška', machineType: 'RTR', departmentId: 'vna', status: 'active', shift: 'B', lastMovedAt: new Date(Date.now() - 1000 * 60 * 130).toISOString() },
+  { id: 'op-b-54', name: 'Tadeáš Mach', machineType: 'RTR', departmentId: 'vna', status: 'active', shift: 'B', lastMovedAt: new Date(Date.now() - 1000 * 60 * 20).toISOString() },
+
+  // --- OBWI (6 operátorů) ---
+  { id: 'op-b-55', name: 'Adrian Sýkora', machineType: 'LL', departmentId: 'obwi', status: 'active', shift: 'B', lastMovedAt: new Date(Date.now() - 1000 * 60 * 50).toISOString() },
+  { id: 'op-b-56', name: 'Bohumil Vlasák', machineType: 'RTR', departmentId: 'obwi', status: 'active', shift: 'B', lastMovedAt: new Date(Date.now() - 1000 * 60 * 110).toISOString() },
+  { id: 'op-b-57', name: 'Cyril Trojan', machineType: 'LL', departmentId: 'obwi', status: 'active', shift: 'B', lastMovedAt: new Date(Date.now() - 1000 * 60 * 35).toISOString() },
+  { id: 'op-b-58', name: 'Dalibor Pešek', machineType: 'RTR', departmentId: 'obwi', status: 'active', shift: 'B', lastMovedAt: new Date(Date.now() - 1000 * 60 * 90).toISOString() },
+  { id: 'op-b-59', name: 'František Říha', machineType: 'LL', departmentId: 'obwi', status: 'active', shift: 'B', lastMovedAt: new Date(Date.now() - 1000 * 60 * 140).toISOString() },
+  { id: 'op-b-60', name: 'Gustav Zoubek', machineType: 'RTR', departmentId: 'obwi', status: 'active', shift: 'B', lastMovedAt: new Date(Date.now() - 1000 * 60 * 15).toISOString() },
+];
+
+// Reálný tým 60 operátorů pro Směnu C (všechna oddělení PICK)
+export const INITIAL_OPERATORS_SHIFT_C: Operator[] = [
+  // --- Outbound / HOVC (10 operátorů) ---
+  { id: 'op-c-1', name: 'Jan Kováč', machineType: 'LL', departmentId: 'hovc', status: 'active', shift: 'C', lastMovedAt: new Date(Date.now() - 1000 * 60 * 45).toISOString() },
+  { id: 'op-c-2', name: 'Petr Řezníček', machineType: 'RTR', departmentId: 'hovc', status: 'active', shift: 'C', lastMovedAt: new Date(Date.now() - 1000 * 60 * 120).toISOString() },
+  { id: 'op-c-3', name: 'Martin Šulc', machineType: 'LL', departmentId: 'hovc', status: 'active', shift: 'C', lastMovedAt: new Date(Date.now() - 1000 * 60 * 90).toISOString() },
+  { id: 'op-c-4', name: 'Tomáš Malý', machineType: 'RTR', departmentId: 'hovc', status: 'active', shift: 'C', lastMovedAt: new Date(Date.now() - 1000 * 60 * 30).toISOString() },
+  { id: 'op-c-5', name: 'Michal Holý', machineType: 'LL', departmentId: 'hovc', status: 'active', shift: 'C', lastMovedAt: new Date(Date.now() - 1000 * 60 * 150).toISOString() },
+  { id: 'op-c-6', name: 'Jakub Vydra', machineType: 'LL', departmentId: 'hovc', status: 'active', shift: 'C', lastMovedAt: new Date(Date.now() - 1000 * 60 * 200).toISOString() },
+  { id: 'op-c-7', name: 'Lukáš Trojan', machineType: 'RTR', departmentId: 'hovc', status: 'active', shift: 'C', lastMovedAt: new Date(Date.now() - 1000 * 60 * 60).toISOString() },
+  { id: 'op-c-8', name: 'David Sova', machineType: 'LL', departmentId: 'hovc', status: 'active', shift: 'C', lastMovedAt: new Date(Date.now() - 1000 * 60 * 180).toISOString() },
+  { id: 'op-c-9', name: 'Filip Kohout', machineType: 'RTR', departmentId: 'hovc', status: 'active', shift: 'C', lastMovedAt: new Date(Date.now() - 1000 * 60 * 110).toISOString() },
+  { id: 'op-c-10', name: 'Zdeněk Strnad', machineType: 'LL', departmentId: 'hovc', status: 'active', shift: 'C', lastMovedAt: new Date(Date.now() - 1000 * 60 * 40).toISOString() },
+
+  // --- HOVS (10 operátorů) ---
+  { id: 'op-c-11', name: 'Václav Vlach', machineType: 'RTR', departmentId: 'hovs', status: 'active', shift: 'C', lastMovedAt: new Date(Date.now() - 1000 * 60 * 80).toISOString() },
+  { id: 'op-c-12', name: 'Ondřej Klement', machineType: 'LL', departmentId: 'hovs', status: 'active', shift: 'C', lastMovedAt: new Date(Date.now() - 1000 * 60 * 50).toISOString() },
+  { id: 'op-c-13', name: 'Roman Kvapil', machineType: 'RTR', departmentId: 'hovs', status: 'active', shift: 'C', lastMovedAt: new Date(Date.now() - 1000 * 60 * 140).toISOString() },
+  { id: 'op-c-14', name: 'Aleš Macháček', machineType: 'LL', departmentId: 'hovs', status: 'active', shift: 'C', lastMovedAt: new Date(Date.now() - 1000 * 60 * 20).toISOString() },
+  { id: 'op-c-15', name: 'Libor Pavlík', machineType: 'RTR', departmentId: 'hovs', status: 'active', shift: 'C', lastMovedAt: new Date(Date.now() - 1000 * 60 * 160).toISOString() },
+  { id: 'op-c-16', name: 'Radim Votava', machineType: 'LL', departmentId: 'hovs', status: 'active', shift: 'C', lastMovedAt: new Date(Date.now() - 1000 * 60 * 95).toISOString() },
+  { id: 'op-c-17', name: 'Viktor Chovanec', machineType: 'RTR', departmentId: 'hovs', status: 'active', shift: 'C', lastMovedAt: new Date(Date.now() - 1000 * 60 * 70).toISOString() },
+  { id: 'op-c-18', name: 'Jan Vopálka', machineType: 'RTR', departmentId: 'hovs', status: 'active', shift: 'C', notes: 'Team leader HOVS', lastMovedAt: new Date(Date.now() - 1000 * 60 * 30).toISOString() },
+  { id: 'op-c-19', name: 'Milan Trnka', machineType: 'LL', departmentId: 'hovs', status: 'active', shift: 'C', lastMovedAt: new Date(Date.now() - 1000 * 60 * 115).toISOString() },
+  { id: 'op-c-20', name: 'Stanislav Pecha', machineType: 'RTR', departmentId: 'hovs', status: 'active', shift: 'C', lastMovedAt: new Date(Date.now() - 1000 * 60 * 25).toISOString() },
+
+  // --- Putaway (10 operátorů) ---
+  { id: 'op-c-21', name: 'Daniel Klíma', machineType: 'LL', departmentId: 'putaway', status: 'active', shift: 'C', lastMovedAt: new Date(Date.now() - 1000 * 60 * 65).toISOString() },
+  { id: 'op-c-22', name: 'Boris Heřman', machineType: 'RTR', departmentId: 'putaway', status: 'active', shift: 'C', lastMovedAt: new Date(Date.now() - 1000 * 60 * 130).toISOString() },
+  { id: 'op-c-23', name: 'Emil Janeček', machineType: 'LL', departmentId: 'putaway', status: 'active', shift: 'C', lastMovedAt: new Date(Date.now() - 1000 * 60 * 45).toISOString() },
+  { id: 'op-c-24', name: 'René Brož', machineType: 'RTR', departmentId: 'putaway', status: 'active', shift: 'C', lastMovedAt: new Date(Date.now() - 1000 * 60 * 85).toISOString() },
+  { id: 'op-c-25', name: 'Patrik Lorenc', machineType: 'LL', departmentId: 'putaway', status: 'active', shift: 'C', lastMovedAt: new Date(Date.now() - 1000 * 60 * 105).toISOString() },
+  { id: 'op-c-26', name: 'Richard Doubek', machineType: 'RTR', departmentId: 'putaway', status: 'active', shift: 'C', lastMovedAt: new Date(Date.now() - 1000 * 60 * 15).toISOString() },
+  { id: 'op-c-27', name: 'Erik Šebesta', machineType: 'LL', departmentId: 'putaway', status: 'active', shift: 'C', lastMovedAt: new Date(Date.now() - 1000 * 60 * 175).toISOString() },
+  { id: 'op-c-28', name: 'Robert Sláma', machineType: 'RTR', departmentId: 'putaway', status: 'active', shift: 'C', notes: 'Putaway koordinátor', lastMovedAt: new Date(Date.now() - 1000 * 60 * 55).toISOString() },
+  { id: 'op-c-29', name: 'Marian Kubát', machineType: 'LL', departmentId: 'putaway', status: 'active', shift: 'C', lastMovedAt: new Date(Date.now() - 1000 * 60 * 140).toISOString() },
+  { id: 'op-c-30', name: 'Vladislav Hladík', machineType: 'RTR', departmentId: 'putaway', status: 'active', shift: 'C', lastMovedAt: new Date(Date.now() - 1000 * 60 * 35).toISOString() },
+
+  // --- VAS (9 operátorů) ---
+  { id: 'op-c-31', name: 'Alena Černá', machineType: 'LL', departmentId: 'vas', status: 'active', shift: 'C', lastMovedAt: new Date(Date.now() - 1000 * 60 * 50).toISOString() },
+  { id: 'op-c-32', name: 'Petra Veselá', machineType: 'LL', departmentId: 'vas', status: 'active', shift: 'C', lastMovedAt: new Date(Date.now() - 1000 * 60 * 110).toISOString() },
+  { id: 'op-c-33', name: 'Kamil Vrzal', machineType: 'RTR', departmentId: 'vas', status: 'active', shift: 'C', lastMovedAt: new Date(Date.now() - 1000 * 60 * 40).toISOString() },
+  { id: 'op-c-34', name: 'Jana Horáková', machineType: 'LL', departmentId: 'vas', status: 'active', shift: 'C', lastMovedAt: new Date(Date.now() - 1000 * 60 * 90).toISOString() },
+  { id: 'op-c-35', name: 'Norbert Šťastný', machineType: 'RTR', departmentId: 'vas', status: 'active', shift: 'C', lastMovedAt: new Date(Date.now() - 1000 * 60 * 135).toISOString() },
+  { id: 'op-c-36', name: 'Alexej Vít', machineType: 'LL', departmentId: 'vas', status: 'active', shift: 'C', lastMovedAt: new Date(Date.now() - 1000 * 60 * 75).toISOString() },
+  { id: 'op-c-37', name: 'Denis Šrajer', machineType: 'LL', departmentId: 'vas', status: 'active', shift: 'C', lastMovedAt: new Date(Date.now() - 1000 * 60 * 165).toISOString() },
+  { id: 'op-c-38', name: 'Ivan Šmarda', machineType: 'RTR', departmentId: 'vas', status: 'active', shift: 'C', lastMovedAt: new Date(Date.now() - 1000 * 60 * 25).toISOString() },
+  { id: 'op-c-39', name: 'Věra Benešová', machineType: 'LL', departmentId: 'vas', status: 'active', shift: 'C', lastMovedAt: new Date(Date.now() - 1000 * 60 * 85).toISOString() },
+
+  // --- OBWF (8 operátorů) ---
+  { id: 'op-c-40', name: 'Eduard Zouhar', machineType: 'RTR', departmentId: 'obwf', status: 'active', shift: 'C', lastMovedAt: new Date(Date.now() - 1000 * 60 * 30).toISOString() },
+  { id: 'op-c-41', name: 'Gabriel Vodička', machineType: 'LL', departmentId: 'obwf', status: 'active', shift: 'C', lastMovedAt: new Date(Date.now() - 1000 * 60 * 125).toISOString() },
+  { id: 'op-c-42', name: 'Igor Pelikán', machineType: 'RTR', departmentId: 'obwf', status: 'active', shift: 'C', lastMovedAt: new Date(Date.now() - 1000 * 60 * 60).toISOString() },
+  { id: 'op-c-43', name: 'Marcel Šrámek', machineType: 'LL', departmentId: 'obwf', status: 'active', shift: 'C', lastMovedAt: new Date(Date.now() - 1000 * 60 * 145).toISOString() },
+  { id: 'op-c-44', name: 'Oliver Vlk', machineType: 'RTR', departmentId: 'obwf', status: 'active', shift: 'C', lastMovedAt: new Date(Date.now() - 1000 * 60 * 70).toISOString() },
+  { id: 'op-c-45', name: 'Sebastian Hanzl', machineType: 'LL', departmentId: 'obwf', status: 'active', shift: 'C', lastMovedAt: new Date(Date.now() - 1000 * 60 * 95).toISOString() },
+  { id: 'op-c-46', name: 'Tadeáš Kroupa', machineType: 'RTR', departmentId: 'obwf', status: 'active', shift: 'C', lastMovedAt: new Date(Date.now() - 1000 * 60 * 40).toISOString() },
+  { id: 'op-c-47', name: 'Adrian Louda', machineType: 'LL', departmentId: 'obwf', status: 'active', shift: 'C', lastMovedAt: new Date(Date.now() - 1000 * 60 * 115).toISOString() },
+
+  // --- VNA (7 operátorů) ---
+  { id: 'op-c-48', name: 'Bohumil Zítko', machineType: 'RTR', departmentId: 'vna', status: 'active', shift: 'C', lastMovedAt: new Date(Date.now() - 1000 * 60 * 60).toISOString() },
+  { id: 'op-c-49', name: 'Cyril Hrdlička', machineType: 'RTR', departmentId: 'vna', status: 'active', shift: 'C', notes: 'Team leader VNA', lastMovedAt: new Date(Date.now() - 1000 * 60 * 30).toISOString() },
+  { id: 'op-c-50', name: 'Dalibor Šmíd', machineType: 'RTR', departmentId: 'vna', status: 'active', shift: 'C', lastMovedAt: new Date(Date.now() - 1000 * 60 * 100).toISOString() },
+  { id: 'op-c-51', name: 'František Žák', machineType: 'RTR', departmentId: 'vna', status: 'active', shift: 'C', lastMovedAt: new Date(Date.now() - 1000 * 60 * 45).toISOString() },
+  { id: 'op-c-52', name: 'Gustav Cibulka', machineType: 'RTR', departmentId: 'vna', status: 'active', shift: 'C', lastMovedAt: new Date(Date.now() - 1000 * 60 * 85).toISOString() },
+  { id: 'op-c-53', name: 'Hynek Křížek', machineType: 'RTR', departmentId: 'vna', status: 'active', shift: 'C', lastMovedAt: new Date(Date.now() - 1000 * 60 * 130).toISOString() },
+  { id: 'op-c-54', name: 'Jan Veverka', machineType: 'RTR', departmentId: 'vna', status: 'active', shift: 'C', lastMovedAt: new Date(Date.now() - 1000 * 60 * 20).toISOString() },
+
+  // --- OBWI (6 operátorů) ---
+  { id: 'op-c-55', name: 'Karel Vacek', machineType: 'LL', departmentId: 'obwi', status: 'active', shift: 'C', lastMovedAt: new Date(Date.now() - 1000 * 60 * 50).toISOString() },
+  { id: 'op-c-56', name: 'Luboš Valenta', machineType: 'RTR', departmentId: 'obwi', status: 'active', shift: 'C', lastMovedAt: new Date(Date.now() - 1000 * 60 * 110).toISOString() },
+  { id: 'op-c-57', name: 'Matěj Vrbka', machineType: 'LL', departmentId: 'obwi', status: 'active', shift: 'C', lastMovedAt: new Date(Date.now() - 1000 * 60 * 35).toISOString() },
+  { id: 'op-c-58', name: 'Nikolas Zima', machineType: 'RTR', departmentId: 'obwi', status: 'active', shift: 'C', lastMovedAt: new Date(Date.now() - 1000 * 60 * 90).toISOString() },
+  { id: 'op-c-59', name: 'Otakar Bednář', machineType: 'LL', departmentId: 'obwi', status: 'active', shift: 'C', lastMovedAt: new Date(Date.now() - 1000 * 60 * 140).toISOString() },
+  { id: 'op-c-60', name: 'Pavel Horký', machineType: 'RTR', departmentId: 'obwi', status: 'active', shift: 'C', lastMovedAt: new Date(Date.now() - 1000 * 60 * 15).toISOString() },
+];
+
+export const getInitialOperatorsForShift = (shift: 'A' | 'B' | 'C'): Operator[] => {
+  switch (shift) {
+    case 'B':
+      return INITIAL_OPERATORS_SHIFT_B;
+    case 'C':
+      return INITIAL_OPERATORS_SHIFT_C;
+    case 'A':
+    default:
+      return INITIAL_OPERATORS_SHIFT_A;
+  }
+};

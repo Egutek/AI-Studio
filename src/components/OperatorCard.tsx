@@ -4,21 +4,30 @@ import {
   Clock,
   Edit2,
   GripVertical,
+  Users,
 } from 'lucide-react';
-import { Operator, OperatorStatus, DepartmentId } from '../types';
-import { startGlobalDrag, endGlobalDrag, resolveOperatorFromDrop, getGlobalDragState } from '../utils/dragState';
+import { Operator, OperatorStatus, DepartmentId, AbsenceReason } from '../types';
+import {
+  startGlobalDrag,
+  endGlobalDrag,
+  resolveOperatorIdsFromDrop,
+  getGlobalDragState,
+} from '../utils/dragState';
 
 interface OperatorCardProps {
   operator: Operator;
   allOperators?: Operator[];
   isSelected?: boolean;
   isBulkSelected?: boolean;
-  onSelect?: (operator) => void;
+  isAnyBulkActive?: boolean;
+  bulkSelectedIds?: string[];
+  onSelect?: (operator: Operator) => void;
   onOpenQuickMove: (operator: Operator) => void;
   onEditOperator: (operator: Operator) => void;
   onToggleBulkSelect?: (operatorId: string) => void;
   onChangeStatus?: (operatorId: string, newStatus: OperatorStatus) => void;
-  onDropOperator?: (operatorId: string, targetDeptId: DepartmentId) => void;
+  onChangeAbsenceReason?: (operatorId: string, reason: AbsenceReason) => void;
+  onDropOperator?: (operatorIds: string[], targetDeptId: DepartmentId) => void;
 }
 
 export const OperatorCard: React.FC<OperatorCardProps> = ({
@@ -26,10 +35,13 @@ export const OperatorCard: React.FC<OperatorCardProps> = ({
   allOperators = [],
   isSelected = false,
   isBulkSelected = false,
+  isAnyBulkActive = false,
+  bulkSelectedIds = [],
   onSelect,
   onOpenQuickMove,
   onEditOperator,
   onToggleBulkSelect,
+  onChangeAbsenceReason,
   onDropOperator,
 }) => {
   const [isDragging, setIsDragging] = useState(false);
@@ -48,6 +60,7 @@ export const OperatorCard: React.FC<OperatorCardProps> = ({
   };
 
   const isAbsence = operator.departmentId === 'unassigned' || operator.status === 'absence';
+  const isMultiDragCandidate = isBulkSelected && bulkSelectedIds.length > 1;
 
   return (
     <div
@@ -56,15 +69,24 @@ export const OperatorCard: React.FC<OperatorCardProps> = ({
       onClick={(e) => {
         // Only select if not clicking an interactive button
         const target = e.target as HTMLElement;
-        if (!target.closest('button') && onSelect) {
+        if (target.closest('button')) return;
+
+        // If bulk mode is active, clicking anywhere on the card toggles bulk selection!
+        if (isAnyBulkActive || isBulkSelected) {
+          onToggleBulkSelect?.(operator.id);
+        } else if (onSelect) {
           onSelect(operator);
         }
       }}
       onDragStart={(e) => {
         setIsDragging(true);
-        startGlobalDrag(operator);
+        const dragIds = isMultiDragCandidate ? bulkSelectedIds : [operator.id];
+        startGlobalDrag(operator, dragIds);
         try {
           e.dataTransfer.setData('application/x-operator-id', operator.id);
+          if (isMultiDragCandidate) {
+            e.dataTransfer.setData('application/x-bulk-operator-ids', JSON.stringify(dragIds));
+          }
           e.dataTransfer.setData('text/plain', operator.id);
           e.dataTransfer.effectAllowed = 'move';
         } catch {
@@ -83,15 +105,18 @@ export const OperatorCard: React.FC<OperatorCardProps> = ({
         e.preventDefault();
         e.stopPropagation();
         if (onDropOperator) {
-          const resolved = resolveOperatorFromDrop(e, allOperators);
-          const droppedId =
-            resolved?.id ||
-            e.dataTransfer.getData('application/x-operator-id') ||
-            e.dataTransfer.getData('text/plain') ||
-            getGlobalDragState().operatorId;
+          const resolvedIds = resolveOperatorIdsFromDrop(e, allOperators);
+          const droppedIds =
+            resolvedIds.length > 0
+              ? resolvedIds
+              : getGlobalDragState().operatorIds.length > 0
+              ? getGlobalDragState().operatorIds
+              : getGlobalDragState().operatorId
+              ? [getGlobalDragState().operatorId!]
+              : [];
 
-          if (droppedId) {
-            onDropOperator(droppedId, operator.departmentId);
+          if (droppedIds.length > 0) {
+            onDropOperator(droppedIds, operator.departmentId);
           }
         }
       }}
@@ -99,7 +124,7 @@ export const OperatorCard: React.FC<OperatorCardProps> = ({
         isDragging
           ? 'opacity-35 ring-2 ring-blue-500 border-dashed border-blue-500 bg-blue-50/50 dark:bg-blue-950/40 shadow-none'
           : isBulkSelected
-          ? 'ring-2 ring-blue-500 border-blue-400 bg-blue-50/60 dark:bg-blue-950/40 shadow-xs'
+          ? 'ring-2 ring-blue-500 border-blue-400 bg-blue-50/70 dark:bg-blue-950/50 shadow-xs'
           : isSelected
           ? 'ring-2 ring-blue-600 dark:ring-blue-400 border-blue-500 bg-blue-50/70 dark:bg-blue-950/60 shadow-md'
           : isAbsence
@@ -107,6 +132,14 @@ export const OperatorCard: React.FC<OperatorCardProps> = ({
           : 'bg-white dark:bg-slate-800/95 border-slate-200/80 dark:border-slate-700/80 hover:shadow-sm hover:border-blue-400 dark:hover:border-blue-500'
       }`}
     >
+      {/* Visual pill when multi-selected */}
+      {isMultiDragCandidate && (
+        <div className="absolute -top-2 -right-1 z-10 bg-blue-600 text-white text-[10px] font-extrabold px-1.5 py-0.2 rounded-full shadow-xs flex items-center gap-0.5 pointer-events-none">
+          <Users className="w-2.5 h-2.5" />
+          <span>{bulkSelectedIds.length}</span>
+        </div>
+      )}
+
       {/* Top Line: Checkbox, Grip, Status, Name, Machine Badge & Direct Edit */}
       <div className="flex items-center justify-between gap-1.5">
         <div className="flex items-center gap-1.5 min-w-0 flex-1">
@@ -155,6 +188,38 @@ export const OperatorCard: React.FC<OperatorCardProps> = ({
             >
               {operator.machineType}
             </span>
+          )}
+
+          {/* Absence Reason badge (Dovolená / PN / Absence) */}
+          {isAbsence && (
+            <button
+              type="button"
+              draggable={false}
+              onMouseDown={(e) => e.stopPropagation()}
+              onClick={(e) => {
+                e.stopPropagation();
+                if (onChangeAbsenceReason) {
+                  const current = operator.absenceReason || 'Absence';
+                  const next: AbsenceReason =
+                    current === 'Dovolená'
+                      ? 'PN'
+                      : current === 'PN'
+                      ? 'Absence'
+                      : 'Dovolená';
+                  onChangeAbsenceReason(operator.id, next);
+                }
+              }}
+              className={`inline-flex items-center px-1.5 py-0.2 rounded text-[10px] font-bold tracking-tight transition-colors cursor-pointer shrink-0 border ${
+                operator.absenceReason === 'Dovolená'
+                  ? 'bg-amber-50 dark:bg-amber-950/40 text-amber-800 dark:text-amber-300 border-amber-300 dark:border-amber-700/60 hover:bg-amber-100'
+                  : operator.absenceReason === 'PN'
+                  ? 'bg-rose-50 dark:bg-rose-950/40 text-rose-800 dark:text-rose-300 border-rose-300 dark:border-rose-700/60 hover:bg-rose-100'
+                  : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-300 dark:border-slate-700 hover:bg-slate-200'
+              }`}
+              title={`Důvod: ${operator.absenceReason || 'Absence'}. Kliknutím přepnout na další.`}
+            >
+              <span>{operator.absenceReason || 'Absence'}</span>
+            </button>
           )}
         </div>
 

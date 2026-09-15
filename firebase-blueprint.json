@@ -1,0 +1,295 @@
+{
+  "entities": {
+    "Operator": {
+      "title": "Operator",
+      "description": "Warehouse operator with current department assignment and machine qualification",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier of operator",
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "name": {
+          "type": "string",
+          "description": "Full name of the operator",
+          "maxLength": 100
+        },
+        "machineType": {
+          "type": "string",
+          "enum": ["LL", "RTR", "NONE"],
+          "description": "Machine certification type"
+        },
+        "departmentId": {
+          "type": "string",
+          "description": "Current department ID",
+          "maxLength": 64
+        },
+        "isVnaOnly": {
+          "type": "boolean",
+          "description": "Optional VNA lock status"
+        },
+        "status": {
+          "type": "string",
+          "enum": ["active", "break", "absence"],
+          "description": "Current operational status"
+        },
+        "notes": {
+          "type": "string",
+          "description": "Optional dispatcher notes",
+          "maxLength": 500
+        },
+        "lastMovedAt": {
+          "type": "string",
+          "description": "ISO timestamp of last movement",
+          "maxLength": 64
+        },
+        "updatedBy": {
+          "type": "string",
+          "description": "User identifier who performed the update",
+          "maxLength": 128
+        }
+      },
+      "required": ["id", "name", "machineType", "departmentId", "status", "lastMovedAt"]
+    },
+    "MoveHistoryRecord": {
+      "title": "MoveHistoryRecord",
+      "description": "Audit log entry of operator department reassignment",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique history record identifier",
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "operatorId": {
+          "type": "string",
+          "description": "ID of operator reassigned",
+          "maxLength": 128
+        },
+        "operatorName": {
+          "type": "string",
+          "description": "Name of operator reassigned",
+          "maxLength": 100
+        },
+        "machineType": {
+          "type": "string",
+          "description": "Machine qualification",
+          "maxLength": 10
+        },
+        "fromDept": {
+          "type": "string",
+          "description": "Source department ID",
+          "maxLength": 30
+        },
+        "toDept": {
+          "type": "string",
+          "description": "Target department ID",
+          "maxLength": 30
+        },
+        "timestamp": {
+          "type": "string",
+          "description": "ISO timestamp of move",
+          "maxLength": 64
+        },
+        "reason": {
+          "type": "string",
+          "description": "Optional reason for move",
+          "maxLength": 300
+        },
+        "userId": {
+          "type": "string",
+          "description": "UID of supervisor who logged the move",
+          "maxLength": 128
+        }
+      },
+      "required": ["id", "operatorId", "operatorName", "machineType", "fromDept", "toDept", "timestamp"]
+    },
+    "ShiftTemplate": {
+      "title": "ShiftTemplate",
+      "description": "Saved staffing distribution template for department allocations",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique template identifier",
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "name": {
+          "type": "string",
+          "description": "Template name",
+          "maxLength": 120
+        },
+        "description": {
+          "type": "string",
+          "description": "Template description",
+          "maxLength": 500
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "ISO timestamp of creation",
+          "maxLength": 64
+        },
+        "isBuiltIn": {
+          "type": "boolean",
+          "description": "Whether template is system built-in"
+        },
+        "shift": {
+          "type": "string",
+          "enum": ["A", "B", "C", "all"],
+          "description": "Shift this template is designated for"
+        },
+        "operatorCount": {
+          "type": "number",
+          "description": "Total operators in template"
+        },
+        "activeCount": {
+          "type": "number",
+          "description": "Active operators in template"
+        },
+        "assignments": {
+          "type": "string",
+          "description": "JSON string or list of shift assignments",
+          "maxLength": 50000
+        },
+        "createdBy": {
+          "type": "string",
+          "description": "User who created the template",
+          "maxLength": 128
+        }
+      },
+      "required": ["id", "name", "createdAt", "operatorCount", "activeCount"]
+    },
+    "AppUser": {
+      "title": "AppUser",
+      "description": "User profile with role assignment for authorization",
+      "type": "object",
+      "properties": {
+        "uid": {
+          "type": "string",
+          "description": "Firebase Auth UID",
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "email": {
+          "type": "string",
+          "description": "User email address",
+          "maxLength": 120
+        },
+        "displayName": {
+          "type": "string",
+          "description": "User display name",
+          "maxLength": 100
+        },
+        "role": {
+          "type": "string",
+          "enum": ["admin", "supervisor", "viewer"],
+          "description": "Authorization role"
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "ISO timestamp of creation",
+          "maxLength": 64
+        }
+      },
+      "required": ["uid", "email", "role", "createdAt"]
+    },
+    "CustomDepartment": {
+      "title": "CustomDepartment",
+      "description": "Ad-hoc or extra work department created dynamically by shift dispatchers",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique department identifier",
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "name": {
+          "type": "string",
+          "description": "Short department or task name",
+          "maxLength": 100
+        },
+        "fullName": {
+          "type": "string",
+          "description": "Full description/title of extra work",
+          "maxLength": 120
+        },
+        "code": {
+          "type": "string",
+          "description": "Abbreviation badge code",
+          "maxLength": 20
+        },
+        "description": {
+          "type": "string",
+          "description": "Detailed description or instruction",
+          "maxLength": 500
+        },
+        "color": {
+          "type": "string",
+          "description": "Color theme identifier",
+          "maxLength": 30
+        },
+        "badgeBg": {
+          "type": "string",
+          "description": "Badge CSS classes",
+          "maxLength": 200
+        },
+        "badgeText": {
+          "type": "string",
+          "description": "Badge text CSS class",
+          "maxLength": 100
+        },
+        "borderColor": {
+          "type": "string",
+          "description": "Border CSS class",
+          "maxLength": 100
+        },
+        "iconName": {
+          "type": "string",
+          "description": "Lucide icon name",
+          "maxLength": 50
+        },
+        "targetCount": {
+          "type": "number",
+          "description": "Target staffing count"
+        },
+        "isCustom": {
+          "type": "boolean",
+          "description": "Identifies dynamically created department"
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "ISO timestamp of creation",
+          "maxLength": 64
+        }
+      },
+      "required": ["id", "name"]
+    }
+  },
+  "firestore": {
+    "/operators/{operatorId}": {
+      "schema": "#/entities/Operator",
+      "description": "Collection of all operators on shift with their current department and status"
+    },
+    "/history/{historyId}": {
+      "schema": "#/entities/MoveHistoryRecord",
+      "description": "Audit trail log of all operator department reassignments"
+    },
+    "/templates/{templateId}": {
+      "schema": "#/entities/ShiftTemplate",
+      "description": "Staffing distribution templates for shift planning"
+    },
+    "/customDepartments/{deptId}": {
+      "schema": "#/entities/CustomDepartment",
+      "description": "Ad-hoc extra work departments created by dispatchers"
+    },
+    "/users/{userId}": {
+      "schema": "#/entities/AppUser",
+      "description": "User directory profiles and role assignments"
+    }
+  }
+}

@@ -11,10 +11,20 @@ import {
   Plus,
   Users,
   CheckSquare,
+  Trash2,
 } from 'lucide-react';
-import { Department, DepartmentId, Operator, OperatorStatus } from '../types';
+import {
+  Department,
+  DepartmentId,
+  Operator,
+  OperatorStatus,
+  AbsenceReason,
+} from '../types';
 import { OperatorCard } from './OperatorCard';
-import { resolveOperatorFromDrop, getGlobalDragState } from '../utils/dragState';
+import {
+  resolveOperatorIdsFromDrop,
+  getGlobalDragState,
+} from '../utils/dragState';
 
 interface DepartmentColumnProps {
   department: Department;
@@ -25,12 +35,14 @@ interface DepartmentColumnProps {
   bulkSelectedIds?: Set<string>;
   onToggleBulkSelect?: (operatorId: string) => void;
   onSelectOperator?: (operator: Operator) => void;
-  onColumnClickToMove?: (deptId: DepartmentId) => void;
+  onDeselectOperator?: () => void;
   onOpenQuickMove: (operator: Operator) => void;
   onEditOperator: (operator: Operator) => void;
   onChangeStatus?: (operatorId: string, newStatus: OperatorStatus) => void;
+  onChangeAbsenceReason?: (operatorId: string, reason: AbsenceReason) => void;
   onAddOperatorToDept: (deptId: DepartmentId) => void;
-  onDropOperator: (operatorId: string, targetDeptId: DepartmentId) => void;
+  onDropOperator: (operatorIds: string[], targetDeptId: DepartmentId) => void;
+  onDeleteDepartment?: (deptId: DepartmentId) => void;
 }
 
 // Vibrant department header color configurations
@@ -111,6 +123,67 @@ const DEPT_HEADER_THEMES: Record<
   },
 };
 
+const CUSTOM_THEMES_BY_COLOR: Record<
+  string,
+  {
+    headerBg: string;
+    border: string;
+    iconBg: string;
+    addBtnHover: string;
+    chipBgLL: string;
+    chipBgRTR: string;
+  }
+> = {
+  amber: {
+    headerBg: 'bg-gradient-to-r from-amber-700/90 via-amber-600/90 to-amber-800/90 text-white',
+    border: 'border-dashed border-amber-300/90 dark:border-amber-700/80',
+    iconBg: 'bg-white/20 text-white shadow-xs',
+    addBtnHover: 'hover:bg-white/20 text-white',
+    chipBgLL: 'bg-white/20 text-white border border-white/30',
+    chipBgRTR: 'bg-white/30 text-white font-extrabold border border-white/40',
+  },
+  orange: {
+    headerBg: 'bg-gradient-to-r from-orange-700/90 via-orange-600/90 to-orange-800/90 text-white',
+    border: 'border-dashed border-orange-300/90 dark:border-orange-700/80',
+    iconBg: 'bg-white/20 text-white shadow-xs',
+    addBtnHover: 'hover:bg-white/20 text-white',
+    chipBgLL: 'bg-white/20 text-white border border-white/30',
+    chipBgRTR: 'bg-white/30 text-white font-extrabold border border-white/40',
+  },
+  teal: {
+    headerBg: 'bg-gradient-to-r from-teal-700/90 via-teal-600/90 to-teal-800/90 text-white',
+    border: 'border-dashed border-teal-300/90 dark:border-teal-700/80',
+    iconBg: 'bg-white/20 text-white shadow-xs',
+    addBtnHover: 'hover:bg-white/20 text-white',
+    chipBgLL: 'bg-white/20 text-white border border-white/30',
+    chipBgRTR: 'bg-white/30 text-white font-extrabold border border-white/40',
+  },
+  cyan: {
+    headerBg: 'bg-gradient-to-r from-cyan-700/90 via-cyan-600/90 to-cyan-800/90 text-white',
+    border: 'border-dashed border-cyan-300/90 dark:border-cyan-700/80',
+    iconBg: 'bg-white/20 text-white shadow-xs',
+    addBtnHover: 'hover:bg-white/20 text-white',
+    chipBgLL: 'bg-white/20 text-white border border-white/30',
+    chipBgRTR: 'bg-white/30 text-white font-extrabold border border-white/40',
+  },
+  indigo: {
+    headerBg: 'bg-gradient-to-r from-indigo-700/90 via-indigo-600/90 to-indigo-800/90 text-white',
+    border: 'border-dashed border-indigo-300/90 dark:border-indigo-700/80',
+    iconBg: 'bg-white/20 text-white shadow-xs',
+    addBtnHover: 'hover:bg-white/20 text-white',
+    chipBgLL: 'bg-white/20 text-white border border-white/30',
+    chipBgRTR: 'bg-white/30 text-white font-extrabold border border-white/40',
+  },
+  slate: {
+    headerBg: 'bg-gradient-to-r from-slate-700/90 via-slate-600/90 to-slate-800/90 text-white',
+    border: 'border-dashed border-slate-300/90 dark:border-slate-700/80',
+    iconBg: 'bg-white/20 text-white shadow-xs',
+    addBtnHover: 'hover:bg-white/20 text-white',
+    chipBgLL: 'bg-white/20 text-white border border-white/30',
+    chipBgRTR: 'bg-white/30 text-white font-extrabold border border-white/40',
+  },
+};
+
 export const DepartmentColumn: React.FC<DepartmentColumnProps> = ({
   department,
   operators,
@@ -120,17 +193,23 @@ export const DepartmentColumn: React.FC<DepartmentColumnProps> = ({
   bulkSelectedIds,
   onToggleBulkSelect,
   onSelectOperator,
-  onColumnClickToMove,
+  onDeselectOperator,
   onOpenQuickMove,
   onEditOperator,
   onChangeStatus,
+  onChangeAbsenceReason,
   onAddOperatorToDept,
   onDropOperator,
+  onDeleteDepartment,
 }) => {
   const [isDragOver, setIsDragOver] = useState(false);
+  const [absenceFilter, setAbsenceFilter] = useState<'ALL' | AbsenceReason>('ALL');
   const dragCounter = useRef(0);
 
   const getDeptIcon = (id: DepartmentId) => {
+    if (department.isCustom) {
+      return <Wrench className="w-5 h-5 text-white" />;
+    }
     switch (id) {
       case 'hovc':
         return <PackageCheck className="w-5 h-5 text-white" />;
@@ -182,20 +261,30 @@ export const DepartmentColumn: React.FC<DepartmentColumnProps> = ({
     dragCounter.current = 0;
     setIsDragOver(false);
 
-    // Use robust multi-strategy operator resolver
-    const resolved = resolveOperatorFromDrop(e, allOperators.length > 0 ? allOperators : operators);
-    const operatorId =
-      resolved?.id ||
-      e.dataTransfer.getData('application/x-operator-id') ||
-      e.dataTransfer.getData('text/plain') ||
-      getGlobalDragState().operatorId;
+    // Use robust multi-strategy operator resolver for single or multi-drag
+    const resolvedIds = resolveOperatorIdsFromDrop(
+      e,
+      allOperators.length > 0 ? allOperators : operators
+    );
+    const operatorIds =
+      resolvedIds.length > 0
+        ? resolvedIds
+        : getGlobalDragState().operatorIds.length > 0
+        ? getGlobalDragState().operatorIds
+        : getGlobalDragState().operatorId
+        ? [getGlobalDragState().operatorId!]
+        : [];
 
-    if (operatorId) {
-      onDropOperator(operatorId, department.id);
+    if (operatorIds.length > 0) {
+      onDropOperator(operatorIds, department.id);
     }
   };
 
   const isAbsence = department.id === 'unassigned';
+  const dovoOps = operators.filter((o) => o.absenceReason === 'Dovolená');
+  const pnOps = operators.filter((o) => o.absenceReason === 'PN');
+  const absenceOps = operators.filter((o) => !o.absenceReason || o.absenceReason === 'Absence');
+
   const activeCount = isAbsence
     ? 0
     : operators.filter((o) => o.status === 'active').length;
@@ -210,9 +299,14 @@ export const DepartmentColumn: React.FC<DepartmentColumnProps> = ({
       ? Math.round((operators.length / totalOperatorsCount) * 100)
       : 0;
 
-  const theme = DEPT_HEADER_THEMES[department.id] || DEPT_HEADER_THEMES.hovc;
+  const displayedOperators =
+    isAbsence && absenceFilter !== 'ALL'
+      ? operators.filter((o) => (o.absenceReason || 'Absence') === absenceFilter)
+      : operators;
 
-  const hasSelectionToMove = Boolean(selectedOperatorId);
+  const theme = department.isCustom
+    ? CUSTOM_THEMES_BY_COLOR[department.color] || CUSTOM_THEMES_BY_COLOR.amber
+    : DEPT_HEADER_THEMES[department.id] || DEPT_HEADER_THEMES.hovc;
 
   return (
     <div
@@ -223,33 +317,46 @@ export const DepartmentColumn: React.FC<DepartmentColumnProps> = ({
       onDrop={handleDrop}
       onClick={(e) => {
         const target = e.target as HTMLElement;
-        if (!target.closest('button') && selectedOperatorId && onColumnClickToMove) {
-          onColumnClickToMove(department.id);
+        // If clicked on column background/header outside any card or button, deselect active operator selection
+        if (!target.closest('button') && !target.closest('input') && !target.closest('[id^="operator-card-"]')) {
+          if (selectedOperatorId && onDeselectOperator) {
+            onDeselectOperator();
+          }
         }
       }}
-      className={`flex flex-col rounded-2xl border transition-all duration-200 min-w-[280px] sm:min-w-[290px] max-w-[340px] flex-1 bg-slate-50/90 dark:bg-slate-900/60 shadow-xs ${
+      className={`flex flex-col rounded-2xl border transition-all duration-200 min-w-[280px] sm:min-w-[290px] max-w-[350px] 2xl:max-w-[380px] flex-1 shrink-0 bg-slate-50/90 dark:bg-slate-900/60 shadow-xs ${
         isDragOver
           ? 'ring-4 ring-blue-500/80 border-blue-500 bg-blue-50/60 dark:bg-blue-950/50 scale-[1.01] shadow-xl'
-          : hasSelectionToMove
-          ? 'border-blue-400 dark:border-blue-600 ring-2 ring-blue-400/30 cursor-pointer hover:ring-blue-500 hover:border-blue-500'
           : theme.border
       }`}
     >
       {/* Colorful Column Header */}
       <div className={`p-3.5 rounded-t-2xl shadow-xs ${theme.headerBg}`}>
         <div className="flex items-center justify-between gap-2">
-          <div className="flex items-center gap-2.5">
-            <div className={`p-2 rounded-xl backdrop-blur-xs ${theme.iconBg}`}>
+          <div className="flex items-center gap-2.5 min-w-0">
+            <div className={`p-2 rounded-xl backdrop-blur-xs shrink-0 ${theme.iconBg}`}>
               {getDeptIcon(department.id)}
             </div>
-            <div>
-              <h3 className="font-black text-base sm:text-lg text-white tracking-tight">
-                {department.name}
-              </h3>
+            <div className="min-w-0">
+              <div className="flex items-center gap-1.5 flex-wrap">
+                <h3 className="font-black text-base sm:text-lg text-white tracking-tight truncate">
+                  {department.name}
+                </h3>
+                {department.isCustom && (
+                  <span className="text-[9px] font-extrabold uppercase px-1.5 py-0.5 rounded bg-white/20 text-white tracking-wider shrink-0">
+                    Vícepráce
+                  </span>
+                )}
+              </div>
+              {department.description && (
+                <p className="text-[11px] text-white/80 line-clamp-1 mt-0.5" title={department.description}>
+                  {department.description}
+                </p>
+              )}
             </div>
           </div>
 
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-1 shrink-0">
             {operators.length > 0 && onToggleBulkSelect && (
               <button
                 type="button"
@@ -283,6 +390,22 @@ export const DepartmentColumn: React.FC<DepartmentColumnProps> = ({
             >
               <Plus className="w-5 h-5" />
             </button>
+
+            {/* Delete / Close custom department button */}
+            {department.isCustom && onDeleteDepartment && (
+              <button
+                type="button"
+                id={`delete-dept-btn-${department.id}`}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onDeleteDepartment(department.id);
+                }}
+                className="p-1.5 rounded-lg text-white/80 hover:text-white bg-rose-500/40 hover:bg-rose-600/90 border border-rose-400/40 transition-all cursor-pointer shadow-2xs"
+                title="Smazat / zrušit toto oddělení víceprací"
+              >
+                <Trash2 className="w-4 h-4" />
+              </button>
+            )}
           </div>
         </div>
 
@@ -293,11 +416,14 @@ export const DepartmentColumn: React.FC<DepartmentColumnProps> = ({
               <Users className="w-3.5 h-3.5 opacity-80" />
               <span>{operators.length} lidí</span>
             </div>
-            {/* Menší číslo pod tím: v provozu nebo mimo směnu */}
+            {/* Menší text pod tím: v provozu nebo rozdělení absence */}
             {isAbsence ? (
-              <span className="text-[10px] font-bold text-rose-200/90 flex items-center gap-1 mt-0.5">
-                <span className="w-1.5 h-1.5 rounded-full bg-rose-400" />
-                <span>{operators.length} mimo halu / absence</span>
+              <span className="text-[10.5px] font-medium text-slate-200/95 flex items-center gap-1.5 mt-0.5 flex-wrap">
+                <span>Dovolená: <strong className="text-amber-300 font-bold">{dovoOps.length}</strong></span>
+                <span>•</span>
+                <span>PN: <strong className="text-rose-300 font-bold">{pnOps.length}</strong></span>
+                <span>•</span>
+                <span>Absence: <strong className="text-white font-bold">{absenceOps.length}</strong></span>
               </span>
             ) : (
               <span className="text-[10px] font-bold text-emerald-200 flex items-center gap-1 mt-0.5">
@@ -327,20 +453,80 @@ export const DepartmentColumn: React.FC<DepartmentColumnProps> = ({
         </div>
       </div>
 
+      {/* Subcategory Filter Tabs for Nepřítomen */}
+      {isAbsence && (
+        <div className="px-2 pt-2 pb-1 border-b border-slate-200/80 dark:border-slate-800 bg-slate-100/70 dark:bg-slate-900/40">
+          <div className="flex items-center gap-1 p-0.5 rounded-xl bg-slate-200/80 dark:bg-slate-800/80 text-[10.5px] font-bold">
+            <button
+              type="button"
+              id="absence-filter-all"
+              onClick={() => setAbsenceFilter('ALL')}
+              className={`flex-1 py-1 rounded-lg transition-all text-center cursor-pointer select-none ${
+                absenceFilter === 'ALL'
+                  ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-2xs font-black'
+                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+              }`}
+            >
+              Vše ({operators.length})
+            </button>
+            <button
+              type="button"
+              id="absence-filter-dovolena"
+              onClick={() => setAbsenceFilter('Dovolená')}
+              className={`flex-1 py-1 rounded-lg transition-all text-center cursor-pointer select-none ${
+                absenceFilter === 'Dovolená'
+                  ? 'bg-amber-100 dark:bg-amber-950/60 text-amber-900 dark:text-amber-200 shadow-2xs font-black border border-amber-300 dark:border-amber-700'
+                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+              }`}
+            >
+              Dovolená ({dovoOps.length})
+            </button>
+            <button
+              type="button"
+              id="absence-filter-pn"
+              onClick={() => setAbsenceFilter('PN')}
+              className={`flex-1 py-1 rounded-lg transition-all text-center cursor-pointer select-none ${
+                absenceFilter === 'PN'
+                  ? 'bg-rose-100 dark:bg-rose-950/60 text-rose-900 dark:text-rose-200 shadow-2xs font-black border border-rose-300 dark:border-rose-700'
+                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+              }`}
+            >
+              PN ({pnOps.length})
+            </button>
+            <button
+              type="button"
+              id="absence-filter-absence"
+              onClick={() => setAbsenceFilter('Absence')}
+              className={`flex-1 py-1 rounded-lg transition-all text-center cursor-pointer select-none ${
+                absenceFilter === 'Absence'
+                  ? 'bg-slate-200 dark:bg-slate-700 text-slate-900 dark:text-white shadow-2xs font-black'
+                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+              }`}
+            >
+              Absence ({absenceOps.length})
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Operator cards list */}
       <div
         onDragOver={handleDragOver}
         onDrop={handleDrop}
         className="p-2 space-y-1.5 overflow-y-auto max-h-[calc(100vh-240px)] min-h-[140px] flex-1"
       >
-        {operators.length === 0 ? (
+        {displayedOperators.length === 0 ? (
           <div
             onDragOver={handleDragOver}
             onDrop={handleDrop}
             className="h-full flex flex-col items-center justify-center p-6 text-center text-slate-400 border-2 border-dashed border-slate-200 dark:border-slate-800 rounded-xl bg-white/40 dark:bg-slate-900/30"
           >
             <Users className="w-7 h-7 mb-2 opacity-40" />
-            <p className="text-xs font-medium">Žádný operátor</p>
+            <p className="text-xs font-medium">
+              {isAbsence && absenceFilter !== 'ALL'
+                ? `Žádný operátor v kategorii "${absenceFilter}"`
+                : 'Žádný operátor'}
+            </p>
             <p className="text-[11px] text-slate-400 mt-0.5">
               Přetáhněte sem člověka nebo klikněte na "Přesunout".
             </p>
@@ -354,18 +540,21 @@ export const DepartmentColumn: React.FC<DepartmentColumnProps> = ({
             </button>
           </div>
         ) : (
-          operators.map((operator) => (
+          displayedOperators.map((operator) => (
             <OperatorCard
               key={operator.id}
               operator={operator}
               allOperators={allOperators.length > 0 ? allOperators : operators}
               isSelected={selectedOperatorId === operator.id}
               isBulkSelected={bulkSelectedIds?.has(operator.id) ?? false}
+              isAnyBulkActive={(bulkSelectedIds?.size ?? 0) > 0}
+              bulkSelectedIds={bulkSelectedIds ? Array.from(bulkSelectedIds) : []}
               onToggleBulkSelect={onToggleBulkSelect}
               onSelect={onSelectOperator}
               onOpenQuickMove={onOpenQuickMove}
               onEditOperator={onEditOperator}
               onChangeStatus={onChangeStatus}
+              onChangeAbsenceReason={onChangeAbsenceReason}
               onDropOperator={onDropOperator}
             />
           ))

@@ -14,9 +14,17 @@ import {
   Pause,
   ArrowRight,
   Bookmark,
+  Cloud,
+  CloudOff,
+  LogOut,
+  LogIn,
+  ShieldCheck,
+  RefreshCw,
+  Wrench,
 } from 'lucide-react';
-import { UndoOperation } from '../types';
+import { ShiftCode, UndoOperation } from '../types';
 import { getDepartmentById } from '../data/departments';
+import { User } from 'firebase/auth';
 
 interface HeaderProps {
   totalCount?: number;
@@ -25,6 +33,8 @@ interface HeaderProps {
   rtrCount?: number;
   vnaCount?: number;
   absenceCount?: number;
+  activeShift?: ShiftCode;
+  onShiftChange?: (shift: ShiftCode) => void;
   searchQuery: string;
   viewMode: 'board' | 'widget' | 'table';
   undoOperations?: UndoOperation[];
@@ -35,17 +45,26 @@ interface HeaderProps {
   onSearchChange: (query: string) => void;
   onViewModeChange: (mode: 'board' | 'widget' | 'table') => void;
   onOpenAddModal: () => void;
+  onOpenAddCustomDept?: () => void;
   onOpenPhotoImport: () => void;
   onOpenTemplatesModal?: () => void;
   onOpenReportModal?: () => void;
   onOpenHistoryModal: () => void;
   onResetData: () => void;
+  currentUser?: User | null;
+  isCloudConnected?: boolean;
+  isCloudSyncing?: boolean;
+  isGoogleSigningIn?: boolean;
+  onGoogleSignIn?: () => void;
+  onSignOut?: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
   totalCount = 65,
   activeCount = 0,
   absenceCount = 0,
+  activeShift = 'A',
+  onShiftChange,
   searchQuery,
   viewMode,
   undoOperations = [],
@@ -56,13 +75,22 @@ export const Header: React.FC<HeaderProps> = ({
   onSearchChange,
   onViewModeChange,
   onOpenAddModal,
+  onOpenAddCustomDept,
   onOpenPhotoImport,
   onOpenTemplatesModal,
   onOpenHistoryModal,
   onResetData,
+  currentUser,
+  isCloudConnected = false,
+  isCloudSyncing = false,
+  isGoogleSigningIn = false,
+  onGoogleSignIn,
+  onSignOut,
 }) => {
   const [isUndoOpen, setIsUndoOpen] = useState(false);
+  const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const undoDropdownRef = useRef<HTMLDivElement>(null);
+  const userMenuRef = useRef<HTMLDivElement>(null);
 
   // Close dropdown on click outside
   useEffect(() => {
@@ -73,21 +101,27 @@ export const Header: React.FC<HeaderProps> = ({
       ) {
         setIsUndoOpen(false);
       }
+      if (
+        userMenuRef.current &&
+        !userMenuRef.current.contains(e.target as Node)
+      ) {
+        setIsUserMenuOpen(false);
+      }
     };
-    if (isUndoOpen) {
+    if (isUndoOpen || isUserMenuOpen) {
       document.addEventListener('mousedown', handleClickOutside);
     }
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
     };
-  }, [isUndoOpen]);
+  }, [isUndoOpen, isUserMenuOpen]);
 
   const hasUndo = undoOperations.length > 0;
   const undoCount = Math.min(undoOperations.length, 5);
 
   return (
-    <header className="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 relative z-20 shadow-2xs">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-2.5 sm:py-3">
+    <header className="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 relative z-20 shadow-2xs w-full">
+      <div className="w-full px-3 sm:px-6 2xl:px-8 py-2.5 sm:py-3">
         {/* Top line: Brand & Actions */}
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2.5">
           {/* Logo & title */}
@@ -103,13 +137,39 @@ export const Header: React.FC<HeaderProps> = ({
                 <span className="text-[10px] font-bold uppercase tracking-wider bg-blue-100 text-blue-800 dark:bg-blue-900/60 dark:text-blue-300 px-2 py-0.5 rounded-full border border-blue-200 dark:border-blue-700">
                   Aftermarket Hub
                 </span>
-                <span
-                  className="inline-flex items-center gap-1 text-[10px] font-semibold text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/40 px-2 py-0.5 rounded-full border border-emerald-200 dark:border-emerald-800/60"
-                  title="Každý přesun se automaticky ukládá na pozadí do paměti prohlížeče"
-                >
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                  <span>Auto-ukládání aktivní</span>
-                </span>
+                {isCloudConnected ? (
+                  <span
+                    className="inline-flex items-center gap-1.5 text-[10px] font-semibold text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/40 px-2.5 py-0.5 rounded-full border border-emerald-200 dark:border-emerald-800/60 shadow-2xs"
+                    title={
+                      currentUser
+                        ? `Přihlášen jako ${currentUser.email} • Živá online synchronizace se všemi zařízeními`
+                        : 'Živá online synchronizace aktivní • Jakákoliv změna se ihned projeví na všech zařízeních s odkazem'
+                    }
+                  >
+                    {isCloudSyncing ? (
+                      <RefreshCw className="w-2.5 h-2.5 text-emerald-600 animate-spin" />
+                    ) : (
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                    )}
+                    <Cloud className="w-2.5 h-2.5 text-emerald-600 dark:text-emerald-400" />
+                    <span className="font-bold">Online:</span>
+                    <span>
+                      {currentUser
+                        ? currentUser.email === 'hemzacekl@gmail.com'
+                          ? 'Admin'
+                          : currentUser.displayName || 'Přihlášen'
+                        : 'Živě synchronizováno'}
+                    </span>
+                  </span>
+                ) : (
+                  <span
+                    className="inline-flex items-center gap-1.5 text-[10px] font-medium text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-950/40 px-2.5 py-0.5 rounded-full border border-amber-200 dark:border-amber-800/60"
+                    title="Připojování k online databázi..."
+                  >
+                    <RefreshCw className="w-2.5 h-2.5 text-amber-600 animate-spin" />
+                    <span>Připojování k online směně...</span>
+                  </span>
+                )}
               </div>
               <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 hidden sm:block">
                 Operační řízení směn a přesuny operátorů
@@ -124,7 +184,7 @@ export const Header: React.FC<HeaderProps> = ({
               <div
                 className={`inline-flex items-center rounded-lg border text-xs transition-colors ${
                   hasUndo
-                    ? 'border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-750'
+                    ? 'border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700'
                     : 'border-slate-200 dark:border-slate-800 bg-transparent text-slate-400 dark:text-slate-600 opacity-50'
                 }`}
               >
@@ -292,6 +352,19 @@ export const Header: React.FC<HeaderProps> = ({
               <span>+ Přidat</span>
             </button>
 
+            {onOpenAddCustomDept && (
+              <button
+                id="header-open-add-custom-dept-btn"
+                onClick={onOpenAddCustomDept}
+                className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-semibold bg-amber-50 hover:bg-amber-100 dark:bg-amber-950/40 dark:hover:bg-amber-900/50 text-amber-800 dark:text-amber-200 border border-amber-300/80 dark:border-amber-700/60 shadow-2xs transition-all active:scale-95"
+                title="Vytvořit oddělení pro vícepráce mimo standardní tabulku"
+              >
+                <Wrench className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" />
+                <span className="hidden sm:inline">+ Vícepráce</span>
+                <span className="sm:hidden">+ Úkol</span>
+              </button>
+            )}
+
             <button
               onClick={onOpenHistoryModal}
               className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 transition-colors"
@@ -308,6 +381,119 @@ export const Header: React.FC<HeaderProps> = ({
             >
               <RotateCcw className="w-3.5 h-3.5" />
             </button>
+
+            {/* Firebase Auth Profile or Sign-In Button */}
+            {currentUser ? (
+              <div className="relative" ref={userMenuRef}>
+                <button
+                  id="header-user-profile-btn"
+                  onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
+                  className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-semibold bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-100 border border-slate-200/80 dark:border-slate-700 transition-all cursor-pointer shadow-2xs"
+                  title={`Přihlášený uživatel: ${currentUser.displayName || currentUser.email}`}
+                >
+                  {currentUser.photoURL ? (
+                    <img
+                      src={currentUser.photoURL}
+                      alt={currentUser.displayName || 'Uživatel'}
+                      referrerPolicy="no-referrer"
+                      className="w-4 h-4 rounded-full object-cover shrink-0"
+                    />
+                  ) : (
+                    <div className="w-4 h-4 rounded-full bg-blue-600 text-white text-[9px] font-bold flex items-center justify-center shrink-0">
+                      {(currentUser.displayName || currentUser.email || 'U').charAt(0).toUpperCase()}
+                    </div>
+                  )}
+                  <span className="max-w-[75px] sm:max-w-[110px] truncate text-[11px]">
+                    {currentUser.displayName?.split(' ')[0] || currentUser.email?.split('@')[0]}
+                  </span>
+                  {currentUser.email === 'hemzacekl@gmail.com' && (
+                    <span className="text-[9px] px-1 py-0.2 rounded bg-amber-100 dark:bg-amber-900/60 text-amber-800 dark:text-amber-300 font-bold">
+                      Admin
+                    </span>
+                  )}
+                  <ChevronDown className={`w-3 h-3 text-slate-400 transition-transform ${isUserMenuOpen ? 'rotate-180' : ''}`} />
+                </button>
+
+                {isUserMenuOpen && (
+                  <div className="absolute right-0 mt-2 w-64 bg-white dark:bg-slate-900 rounded-xl shadow-xl border border-slate-200 dark:border-slate-700 z-50 p-3 animate-in fade-in zoom-in-95 duration-150 space-y-2.5">
+                    <div className="flex items-center gap-2.5 pb-2 border-b border-slate-100 dark:border-slate-800">
+                      {currentUser.photoURL ? (
+                        <img
+                          src={currentUser.photoURL}
+                          alt="Avatar"
+                          referrerPolicy="no-referrer"
+                          className="w-8 h-8 rounded-full object-cover shrink-0"
+                        />
+                      ) : (
+                        <div className="w-8 h-8 rounded-full bg-blue-600 text-white text-xs font-bold flex items-center justify-center shrink-0">
+                          {(currentUser.displayName || currentUser.email || 'U').charAt(0).toUpperCase()}
+                        </div>
+                      )}
+                      <div className="min-w-0">
+                        <p className="font-bold text-xs text-slate-900 dark:text-white truncate">
+                          {currentUser.displayName || 'Přihlášený dispečer'}
+                        </p>
+                        <p className="text-[10px] text-slate-500 dark:text-slate-400 truncate font-mono">
+                          {currentUser.email}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="text-[11px] text-slate-600 dark:text-slate-300 space-y-1 bg-slate-50 dark:bg-slate-800/60 p-2 rounded-lg border border-slate-100 dark:border-slate-800">
+                      <div className="flex items-center justify-between">
+                        <span className="text-slate-400 text-[10px]">Cloud Firestore:</span>
+                        <span className="font-semibold text-emerald-600 dark:text-emerald-400 text-[10px] flex items-center gap-1">
+                          <Cloud className="w-2.5 h-2.5" />
+                          Živá synchronizace
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-slate-400 text-[10px]">Role:</span>
+                        <span className="font-bold text-[10px] text-slate-700 dark:text-slate-200">
+                          {currentUser.email === 'hemzacekl@gmail.com' ? 'Správce (Admin)' : 'Dispečer'}
+                        </span>
+                      </div>
+                    </div>
+
+                    <button
+                      id="header-sign-out-btn"
+                      onClick={() => {
+                        setIsUserMenuOpen(false);
+                        onSignOut?.();
+                      }}
+                      className="w-full py-1.5 px-2 rounded-lg bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/40 dark:hover:bg-rose-900/60 text-rose-700 dark:text-rose-300 font-semibold text-xs transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
+                    >
+                      <LogOut className="w-3.5 h-3.5" />
+                      <span>Odhlásit z Firebase</span>
+                    </button>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <button
+                id="header-google-signin-btn"
+                onClick={onGoogleSignIn}
+                disabled={isGoogleSigningIn}
+                className={`inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
+                  isGoogleSigningIn
+                    ? 'opacity-70 cursor-not-allowed bg-amber-100 dark:bg-amber-900/60 text-amber-800'
+                    : 'bg-amber-50 hover:bg-amber-100 dark:bg-amber-950/40 dark:hover:bg-amber-900/60 text-amber-900 dark:text-amber-200 border border-amber-200 dark:border-amber-800/80 shadow-2xs active:scale-95 cursor-pointer'
+                }`}
+                title="Přihlásit se přes Google pro sdílení operátorů a změn v reálném čase"
+              >
+                {isGoogleSigningIn ? (
+                  <RefreshCw className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400 animate-spin" />
+                ) : (
+                  <LogIn className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" />
+                )}
+                <span className="hidden sm:inline">
+                  {isGoogleSigningIn ? 'Přihlašování...' : 'Google Přihlášení'}
+                </span>
+                <span className="sm:hidden">
+                  {isGoogleSigningIn ? '...' : 'Přihlásit'}
+                </span>
+              </button>
+            )}
           </div>
         </div>
 
@@ -325,8 +511,34 @@ export const Header: React.FC<HeaderProps> = ({
             />
           </div>
 
-          {/* Controls Right: Auto-scroll toggle and View switcher */}
-          <div className="flex items-center gap-2 justify-between sm:justify-end">
+          {/* Controls Right: Shift Switcher (A, B, C), Auto-scroll toggle and View switcher */}
+          <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap justify-between sm:justify-end">
+            {/* Shift Switcher Segmented Control (Směna A, B, C) */}
+            <div
+              id="header-shift-switcher"
+              className="flex items-center bg-slate-100 dark:bg-slate-800 p-1 rounded-xl border border-slate-200/70 dark:border-slate-700 text-xs"
+            >
+              {(['A', 'B', 'C'] as const).map((shift) => {
+                const isActive = activeShift === shift;
+                return (
+                  <button
+                    key={shift}
+                    type="button"
+                    id={`header-shift-${shift.toLowerCase()}-btn`}
+                    onClick={() => onShiftChange?.(shift)}
+                    className={`px-2.5 sm:px-3 py-1 rounded-lg font-bold transition-all cursor-pointer select-none ${
+                      isActive
+                        ? 'bg-blue-600 text-white shadow-2xs'
+                        : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                    }`}
+                    title={`Přepnout na Směnu ${shift}`}
+                  >
+                    <span>Směna {shift}</span>
+                  </button>
+                );
+              })}
+            </div>
+
             {/* Auto-scroll toggle button for hands-free warehouse monitoring */}
             {viewMode === 'board' && (
               <button
@@ -335,7 +547,7 @@ export const Header: React.FC<HeaderProps> = ({
                 className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all border shadow-2xs ${
                   isAutoScrolling
                     ? 'bg-emerald-600 hover:bg-emerald-500 text-white border-emerald-500 animate-pulse'
-                    : 'bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-750 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700'
+                    : 'bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700'
                 }`}
                 title={
                   isAutoScrolling

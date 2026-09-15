@@ -1,10 +1,11 @@
 import React from 'react';
 import { ArrowRightLeft, Edit3, Trash2 } from 'lucide-react';
 import { DEPARTMENTS } from '../data/departments';
-import { DepartmentId, Operator, OperatorStatus } from '../types';
+import { Department, DepartmentId, Operator, OperatorStatus } from '../types';
 
 interface TableViewProps {
   operators: Operator[];
+  customDepartments?: Department[];
   bulkSelectedIds?: Set<string>;
   onToggleBulkSelect?: (operatorId: string) => void;
   onSelectAll?: () => void;
@@ -18,6 +19,7 @@ interface TableViewProps {
 
 export const TableView: React.FC<TableViewProps> = ({
   operators,
+  customDepartments = [],
   bulkSelectedIds,
   onToggleBulkSelect,
   onSelectAll,
@@ -55,9 +57,10 @@ export const TableView: React.FC<TableViewProps> = ({
                 />
               </th>
               <th className="py-3 px-4">Operátor</th>
+              <th className="py-3 px-3 text-center">Směna</th>
               <th className="py-3 px-4">Stroj / Oprávnění</th>
               <th className="py-3 px-4">Oddělení (PICK)</th>
-              <th className="py-3 px-4">Stav</th>
+              <th className="py-3 px-4">Stav / Důvod</th>
               <th className="py-3 px-4">Poznámka</th>
               <th className="py-3 px-4 text-right">Akce</th>
             </tr>
@@ -68,7 +71,17 @@ export const TableView: React.FC<TableViewProps> = ({
               return (
                 <tr
                   key={op.id}
-                  className={`transition-colors ${
+                  onClick={(e) => {
+                    const target = e.target as HTMLElement;
+                    if (
+                      !target.closest('button') &&
+                      !target.closest('select') &&
+                      !target.closest('input')
+                    ) {
+                      onToggleBulkSelect?.(op.id);
+                    }
+                  }}
+                  className={`transition-colors cursor-pointer ${
                     isSelected
                       ? 'bg-blue-50/70 dark:bg-blue-950/40'
                       : 'hover:bg-slate-50 dark:hover:bg-slate-800/40'
@@ -84,6 +97,13 @@ export const TableView: React.FC<TableViewProps> = ({
                   </td>
                   <td className="py-3 px-4 font-bold text-slate-900 dark:text-white">
                     <span>{op.name}</span>
+                  </td>
+
+                  {/* Směna A, B, C */}
+                  <td className="py-3 px-3 text-center">
+                    <span className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-black bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800">
+                      Směna {op.shift || 'A'}
+                    </span>
                   </td>
 
                   {/* LL or RTR */}
@@ -110,34 +130,54 @@ export const TableView: React.FC<TableViewProps> = ({
                       onChange={(e) => onChangeDepartment(op.id, e.target.value as DepartmentId)}
                       className="text-xs font-semibold px-2 py-1 rounded-lg border bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200 border-slate-300 dark:border-slate-700 focus:ring-2 focus:outline-hidden"
                     >
-                      {DEPARTMENTS.map((d) => (
-                        <option key={d.id} value={d.id}>
-                          {d.name}
-                        </option>
-                      ))}
+                      <optgroup label="Hlavní oddělení">
+                        {DEPARTMENTS.map((d) => (
+                          <option key={d.id} value={d.id}>
+                            {d.name}
+                          </option>
+                        ))}
+                      </optgroup>
+                      {customDepartments.length > 0 && (
+                        <optgroup label="Vícepráce">
+                          {customDepartments.map((d) => (
+                            <option key={d.id} value={d.id}>
+                              {d.name} ({d.code})
+                            </option>
+                          ))}
+                        </optgroup>
+                      )}
                     </select>
                   </td>
 
-                  {/* Status */}
+                  {/* Status & Absence subcategory */}
                   <td className="py-3 px-4">
-                    <span
-                      className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-medium ${
-                        op.departmentId === 'unassigned' || op.status === 'absence'
-                          ? 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300'
-                          : 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300'
-                      }`}
-                    >
+                    {op.departmentId === 'unassigned' || op.status === 'absence' ? (
                       <span
-                        className={`w-1.5 h-1.5 rounded-full ${
-                          op.departmentId === 'unassigned' || op.status === 'absence'
-                            ? 'bg-slate-400'
-                            : 'bg-emerald-500'
+                        className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold border ${
+                          op.absenceReason === 'Dovolená'
+                            ? 'bg-amber-50 dark:bg-amber-950/40 text-amber-800 dark:text-amber-300 border-amber-300 dark:border-amber-700'
+                            : op.absenceReason === 'PN'
+                            ? 'bg-rose-50 dark:bg-rose-950/40 text-rose-800 dark:text-rose-300 border-rose-300 dark:border-rose-700'
+                            : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-300 dark:border-slate-700'
                         }`}
-                      />
-                      {op.departmentId === 'unassigned' || op.status === 'absence'
-                        ? 'Absence'
-                        : 'V provozu'}
-                    </span>
+                      >
+                        <span
+                          className={`w-1.5 h-1.5 rounded-full ${
+                            op.absenceReason === 'Dovolená'
+                              ? 'bg-amber-500'
+                              : op.absenceReason === 'PN'
+                              ? 'bg-rose-500'
+                              : 'bg-slate-400'
+                          }`}
+                        />
+                        <span>{op.absenceReason || 'Absence'}</span>
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-medium bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300">
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                        <span>V provozu</span>
+                      </span>
+                    )}
                   </td>
 
                   {/* Note */}
@@ -164,12 +204,8 @@ export const TableView: React.FC<TableViewProps> = ({
                     </button>
                     {onDeleteOperator && (
                       <button
-                        onClick={() => {
-                          if (confirm(`Opravdu chcete odebrat operátora ${op.name}?`)) {
-                            onDeleteOperator(op.id);
-                          }
-                        }}
-                        className="p-1 rounded-lg text-rose-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30 transition-colors"
+                        onClick={() => onDeleteOperator(op.id)}
+                        className="p-1 rounded-lg text-rose-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30 transition-colors cursor-pointer"
                         title="Smazat operátora"
                       >
                         <Trash2 className="w-4 h-4" />

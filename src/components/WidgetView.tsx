@@ -16,14 +16,15 @@ import {
   Lock,
 } from 'lucide-react';
 import { DEPARTMENTS } from '../data/departments';
-import { Operator } from '../types';
+import { Department, Operator } from '../types';
 
 interface WidgetViewProps {
   operators: Operator[];
+  customDepartments?: Department[];
   onSelectDepartment?: (deptId: string) => void;
 }
 
-export const WidgetView: React.FC<WidgetViewProps> = ({ operators }) => {
+export const WidgetView: React.FC<WidgetViewProps> = ({ operators, customDepartments = [] }) => {
   const [copied, setCopied] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
 
@@ -301,6 +302,44 @@ Aktivně: ${activeTotal} | Pauza: ${breakTotal} | Absence: ${absenceTotal}`;
             </div>
             <span className="text-2xl font-black text-rose-400">{obwiOps.length}</span>
           </div>
+
+          {/* Custom / Extra Work Departments */}
+          {customDepartments.length > 0 && (
+            <div className="mb-4">
+              <div className="text-[11px] font-bold uppercase tracking-wider text-amber-400 mb-2 flex items-center gap-1.5">
+                <Wrench className="w-3.5 h-3.5" />
+                <span>Vícepráce a mimořádné úkoly</span>
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                {customDepartments.map((dept) => {
+                  const ops = getDeptOps(dept.id);
+                  return (
+                    <div
+                      key={dept.id}
+                      className="bg-amber-950/20 border border-amber-500/30 hover:border-amber-500/60 rounded-xl p-2.5 flex flex-col justify-between transition-colors"
+                    >
+                      <div className="flex items-center justify-between">
+                        <div className="min-w-0 pr-1">
+                          <span className="font-bold text-xs text-white truncate block">
+                            {dept.name}
+                          </span>
+                          <span className="text-[10px] text-amber-400 font-mono">
+                            {dept.code}
+                          </span>
+                        </div>
+                        <span className="text-xl font-black text-amber-400 shrink-0">
+                          {ops.length}
+                        </span>
+                      </div>
+                      <div className="text-[10px] text-slate-400 mt-1 font-mono">
+                        {ops.filter((o) => o.machineType === 'LL').length} LL • {ops.filter((o) => o.machineType === 'RTR').length} RTR
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
 
           {/* BOTTOM TOTAL SUMMARY STRIP */}
           <div className="bg-slate-900 rounded-xl p-3 border border-slate-800 flex items-center justify-between text-xs">

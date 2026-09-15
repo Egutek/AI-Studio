@@ -1,9 +1,38 @@
-import { INITIAL_OPERATORS } from '../data/initialOperators';
-import { MoveHistoryRecord, Operator, UndoOperation } from '../types';
+import { INITIAL_OPERATORS, INITIAL_OPERATORS_SHIFT_A, INITIAL_OPERATORS_SHIFT_B, INITIAL_OPERATORS_SHIFT_C } from '../data/initialOperators';
+import { MoveHistoryRecord, Operator, ShiftCode, UndoOperation } from '../types';
 
 const OPERATORS_KEY = 'zf_ostrov_pick_operators_real_v3';
 const HISTORY_KEY = 'zf_ostrov_pick_history_real_v3';
 const UNDO_KEY = 'zf_ostrov_pick_undo_stack_v1';
+const ACTIVE_SHIFT_KEY = 'zf_ostrov_active_shift_v1';
+
+export const loadActiveShift = (): ShiftCode => {
+  try {
+    const saved = localStorage.getItem(ACTIVE_SHIFT_KEY);
+    if (saved === 'A' || saved === 'B' || saved === 'C') {
+      return saved;
+    }
+  } catch (e) {
+    console.error('Failed to load active shift from localStorage', e);
+  }
+  return 'A';
+};
+
+export const saveActiveShift = (shift: ShiftCode): void => {
+  try {
+    localStorage.setItem(ACTIVE_SHIFT_KEY, shift);
+  } catch (e) {
+    console.error('Failed to save active shift to localStorage', e);
+  }
+};
+
+export const getAllDefaultOperators = (): Operator[] => {
+  return [
+    ...INITIAL_OPERATORS_SHIFT_A,
+    ...INITIAL_OPERATORS_SHIFT_B,
+    ...INITIAL_OPERATORS_SHIFT_C,
+  ];
+};
 
 export const loadOperators = (): Operator[] => {
   try {
@@ -13,16 +42,17 @@ export const loadOperators = (): Operator[] => {
       if (Array.isArray(parsed) && parsed.length > 0) {
         return parsed.map((op: Operator) => ({
           ...op,
-          // Guarantee valid machineType format
+          shift: op.shift || 'A',
           machineType: op.machineType || 'NONE',
+          absenceReason: op.absenceReason || (op.departmentId === 'unassigned' ? 'Absence' : undefined),
         }));
       }
     }
   } catch (e) {
     console.error('Failed to load operators from localStorage', e);
   }
-  // Default to initial operators on first run
-  return INITIAL_OPERATORS;
+  // Default to all initial operators with their respective shifts
+  return getAllDefaultOperators();
 };
 
 export const saveOperators = (operators: Operator[]): void => {
@@ -90,5 +120,5 @@ export const resetToInitialOperators = (): Operator[] => {
   } catch (e) {
     console.error('Failed to clear storage', e);
   }
-  return INITIAL_OPERATORS;
+  return getAllDefaultOperators();
 };

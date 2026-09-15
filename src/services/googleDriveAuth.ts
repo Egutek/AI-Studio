@@ -66,6 +66,9 @@ export const initAuth = (
 
 // Must be called from a button click or user interaction
 export const googleSignIn = async (): Promise<{ user: User; accessToken: string } | null> => {
+  if (isSigningIn) {
+    return null;
+  }
   try {
     isSigningIn = true;
     const result = await signInWithPopup(auth, provider);
@@ -78,6 +81,15 @@ export const googleSignIn = async (): Promise<{ user: User; accessToken: string 
     cachedUser = result.user;
     return { user: result.user, accessToken: cachedAccessToken };
   } catch (error: any) {
+    const code = error?.code;
+    if (
+      code === 'auth/popup-closed-by-user' ||
+      code === 'auth/cancelled-popup-request' ||
+      code === 'auth/user-cancelled'
+    ) {
+      console.info('Google Drive sign-in popup closed or cancelled by user.');
+      return null;
+    }
     console.error('Sign in error:', error);
     throw error;
   } finally {

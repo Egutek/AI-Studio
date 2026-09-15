@@ -1,0 +1,157 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // 1. Global Safety Net: Default deny all
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Common Security Primitives
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isVerified() {
+      return isSignedIn() && request.auth.token.email_verified == true;
+    }
+
+    function isAdmin() {
+      return isVerified() && (
+        request.auth.token.email == 'hemzacekl@gmail.com' ||
+        exists(/databases/$(database)/documents/admins/$(request.auth.uid))
+      );
+    }
+
+    // Entity Validations
+    function isValidOperator(data) {
+      return data.id is string && isValidId(data.id) &&
+        data.name is string && data.name.size() > 0 && data.name.size() <= 100 &&
+        data.machineType in ['LL', 'RTR', 'NONE'] &&
+        (data.departmentId in ['hovc', 'hovs', 'putaway', 'vas', 'obwf', 'vna', 'obwi', 'unassigned'] || (data.departmentId is string && data.departmentId.size() <= 64 && isValidId(data.departmentId))) &&
+        data.status in ['active', 'break', 'absence'] &&
+        data.lastMovedAt is string && data.lastMovedAt.size() <= 64 &&
+        (!('shift' in data) || data.shift in ['A', 'B', 'C']) &&
+        (!('absenceReason' in data) || data.absenceReason in ['Absence', 'Dovolená', 'PN']) &&
+        (!('isVnaOnly' in data) || data.isVnaOnly is bool) &&
+        (!('notes' in data) || (data.notes is string && data.notes.size() <= 500)) &&
+        (!('updatedBy' in data) || (data.updatedBy is string && data.updatedBy.size() <= 128));
+    }
+
+    function isValidHistory(data) {
+      return data.id is string && isValidId(data.id) &&
+        data.operatorId is string && data.operatorId.size() <= 128 &&
+        data.operatorName is string && data.operatorName.size() <= 100 &&
+        data.machineType is string && data.machineType.size() <= 20 &&
+        data.fromDept is string && data.fromDept.size() <= 30 &&
+        data.toDept is string && data.toDept.size() <= 30 &&
+        data.timestamp is string && data.timestamp.size() <= 64 &&
+        (!('shift' in data) || data.shift in ['A', 'B', 'C']) &&
+        (!('reason' in data) || (data.reason is string && data.reason.size() <= 300)) &&
+        (!('userId' in data) || (data.userId is string && data.userId.size() <= 128));
+    }
+
+    function isValidTemplate(data) {
+      return data.id is string && isValidId(data.id) &&
+        data.name is string && data.name.size() > 0 && data.name.size() <= 120 &&
+        data.createdAt is string && data.createdAt.size() <= 64 &&
+        data.operatorCount is number && data.operatorCount >= 0 &&
+        data.activeCount is number && data.activeCount >= 0 &&
+        (!('description' in data) || (data.description is string && data.description.size() <= 500)) &&
+        (!('shift' in data) || data.shift in ['A', 'B', 'C', 'all']) &&
+        (!('isBuiltIn' in data) || data.isBuiltIn is bool);
+    }
+
+    function isValidCustomDept(data) {
+      return data.id is string && isValidId(data.id) &&
+        data.name is string && data.name.size() > 0 && data.name.size() <= 100 &&
+        (!('fullName' in data) || (data.fullName is string && data.fullName.size() <= 120)) &&
+        (!('code' in data) || (data.code is string && data.code.size() <= 20)) &&
+        (!('description' in data) || (data.description is string && data.description.size() <= 500)) &&
+        (!('color' in data) || (data.color is string && data.color.size() <= 30)) &&
+        (!('badgeBg' in data) || (data.badgeBg is string && data.badgeBg.size() <= 200)) &&
+        (!('badgeText' in data) || (data.badgeText is string && data.badgeText.size() <= 100)) &&
+        (!('borderColor' in data) || (data.borderColor is string && data.borderColor.size() <= 100)) &&
+        (!('iconName' in data) || (data.iconName is string && data.iconName.size() <= 50)) &&
+        (!('targetCount' in data) || (data.targetCount is number && data.targetCount >= 0)) &&
+        (!('isCustom' in data) || data.isCustom is bool) &&
+        (!('shift' in data) || data.shift in ['A', 'B', 'C']) &&
+        (!('createdAt' in data) || (data.createdAt is string && data.createdAt.size() <= 64));
+    }
+
+    function isValidUser(data) {
+      return data.uid is string && data.uid.size() <= 128 &&
+        data.email is string && data.email.size() <= 120 &&
+        data.role in ['admin', 'supervisor', 'viewer'] &&
+        data.createdAt is string && data.createdAt.size() <= 64 &&
+        (!('displayName' in data) || (data.displayName is string && data.displayName.size() <= 100));
+    }
+
+    // Health/Connection Check Document
+    match /test/{testId} {
+      allow read: if true;
+      allow write: if false;
+    }
+
+    // Operators Collection: real-time collaborative shift management for anyone with the link
+    match /operators/{operatorId} {
+      allow read: if true;
+      allow create: if isValidId(operatorId) && isValidOperator(incoming());
+      allow update: if isValidId(operatorId) && isValidOperator(incoming()) && incoming().id == existing().id;
+      allow delete: if isValidId(operatorId);
+    }
+
+    // History Audit Trail: viewable by anyone with link, new moves appendable
+    match /history/{historyId} {
+      allow read: if true;
+      allow create: if isValidId(historyId) && isValidHistory(incoming());
+      allow update: if isAdmin();
+      allow delete: if isAdmin();
+    }
+
+    // Shift Templates: viewable and manageable
+    match /templates/{templateId} {
+      allow read: if true;
+      allow create: if isValidId(templateId) && isValidTemplate(incoming());
+      allow update: if isValidId(templateId) && isValidTemplate(incoming());
+      allow delete: if isValidId(templateId);
+    }
+
+    // Custom / Ad-hoc Departments (Vícepráce): accessible by shift supervisors
+    match /customDepartments/{deptId} {
+      allow read: if true;
+      allow create: if isValidId(deptId) && isValidCustomDept(incoming());
+      allow update: if isValidId(deptId) && isValidCustomDept(incoming());
+      allow delete: if isValidId(deptId);
+    }
+
+    // Users Directory
+    match /users/{userId} {
+      allow get: if isSignedIn() && (request.auth.uid == userId || isAdmin());
+      allow list: if isAdmin();
+      allow create: if isVerified() && request.auth.uid == userId && isValidUser(incoming()) && incoming().role != 'admin';
+      allow update: if isVerified() && (
+        isAdmin() ||
+        (request.auth.uid == userId && isValidUser(incoming()) && incoming().role == existing().role)
+      );
+      allow delete: if isAdmin();
+    }
+
+    // Admins Collection
+    match /admins/{adminId} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
+    }
+  }
+}

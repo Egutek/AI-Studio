@@ -1,16 +1,18 @@
 import React, { useState, useEffect } from 'react';
 import { Copy, Check, MessageSquare, Layers, ChevronDown, ChevronUp } from 'lucide-react';
-import { Operator } from '../types';
+import { Department, Operator } from '../types';
 import { DEPARTMENTS } from '../data/departments';
 
 interface BossAnswerCardProps {
   operators: Operator[];
+  customDepartments?: Department[];
   onOpenReportModal: () => void;
   onQuickMoveModal?: () => void;
 }
 
 export const BossAnswerCard: React.FC<BossAnswerCardProps> = ({
   operators,
+  customDepartments = [],
   onOpenReportModal,
 }) => {
   const [copied, setCopied] = useState(false);
@@ -46,14 +48,22 @@ export const BossAnswerCard: React.FC<BossAnswerCardProps> = ({
   const activeLL = activeOps.filter((op) => op.machineType === 'LL').length;
   const activeRTR = activeOps.filter((op) => op.machineType === 'RTR').length;
   const activeVNA = activeOps.filter((op) => op.departmentId === 'vna').length;
+  const customDeptIds = new Set(customDepartments.map((d) => d.id));
+  const activeExtraOps = activeOps.filter((op) => customDeptIds.has(op.departmentId));
 
   const copyPickSummary = () => {
     const lines = DEPARTMENTS.filter((d) => d.id !== 'unassigned').map((d) => {
       const opsInDept = operators.filter((o) => o.departmentId === d.id && o.status !== 'absence');
       return `${d.name}: ${opsInDept.length}`;
     });
+    const extraLines = customDepartments.map((d) => {
+      const opsInDept = operators.filter((o) => o.departmentId === d.id && o.status !== 'absence');
+      return `${d.name}: ${opsInDept.length}`;
+    });
+    const combined = [...lines, ...extraLines];
 
-    const text = `Ahoj, aktuální stav oddělení PICK: ${activeOps.length} lidí právě v provozu na hale (z ${operators.length} na směně, ${absenceOps.length} v absenci / doma, ${activeLL}× LL, ${activeRTR}× RTR):\n${lines.join(' | ')}.`;
+    const extraNote = activeExtraOps.length > 0 ? `, z toho ${activeExtraOps.length} na vícepracích` : '';
+    const text = `Ahoj, aktuální stav oddělení PICK: ${activeOps.length} lidí právě v provozu na hale (z ${operators.length} na směně${extraNote}, ${absenceOps.length} v absenci / doma, ${activeLL}× LL, ${activeRTR}× RTR):\n${combined.join(' | ')}.`;
     navigator.clipboard.writeText(text);
     setCopied(true);
     setTimeout(() => setCopied(false), 2500);
@@ -197,6 +207,11 @@ export const BossAnswerCard: React.FC<BossAnswerCardProps> = ({
                 <span className="bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-2 py-0.5 rounded-md text-[11px]" title="Aktivní VNA operátoři">
                   {activeVNA}× VNA
                 </span>
+                {activeExtraOps.length > 0 && (
+                  <span className="bg-amber-600/30 text-amber-200 border border-amber-500/40 px-2 py-0.5 rounded-md text-[11px] font-bold" title="Operátoři na vícepracích / mimořádných úkolech">
+                    {activeExtraOps.length}× Vícepráce
+                  </span>
+                )}
               </div>
             </div>
           </div>
@@ -226,7 +241,7 @@ export const BossAnswerCard: React.FC<BossAnswerCardProps> = ({
           <button
             id="collapse-boss-card-btn"
             onClick={toggleCollapse}
-            className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-xs font-semibold bg-slate-800/80 hover:bg-slate-750 text-slate-300 hover:text-white border border-slate-700 transition-colors cursor-pointer"
+            className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-xs font-semibold bg-slate-800/80 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700 transition-colors cursor-pointer"
             title="Zasunout přehled pro více místa"
           >
             <span className="hidden sm:inline">Zasunout</span>
